@@ -284,7 +284,21 @@ select option{background:var(--s2);}
     <div class="card-title">Registrar Apuesta</div>
     <div class="form-grid">
       <div class="fg"><label>Tipster</label><select id="bTipster" onchange="onTipsterChange()"><option value="">— Seleccionar —</option></select></div>
-      <div class="fg"><label>Descripción <span class="opt">(opcional)</span></label><input type="text" id="bDesc" placeholder="Ej: Real Madrid vs Barça"></div>
+    </div>
+
+    <!-- JUGADA (justo después de elegir Tipster, así el resto del form ya sabe qué tabla/cálculo usar) -->
+    <div class="jugada-section">
+      <div class="slabel">¿La jugaste vos?</div>
+      <div class="jugada-toggle">
+        <button class="jt-btn" id="jt-played" onclick="setJugada(true)">✅ Sí, la jugué</button>
+        <button class="jt-btn" id="jt-skipped" onclick="setJugada(false)">👁 No, solo registro</button>
+      </div>
+      <div style="font-size:0.6rem;color:var(--muted);margin-top:5px;">Las "no jugadas" analizan el rendimiento real del tipster sin afectar tu profit.</div>
+      <div id="bankBlockWarning" style="display:none;margin-top:8px;padding:8px 11px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.35);border-radius:8px;font-size:0.68rem;color:var(--red);font-weight:700;"></div>
+    </div>
+
+    <div class="form-grid">
+      <div class="fg"><label>Descripción <span class="opt">(opcional)</span></label><input type="text" id="bDesc" placeholder=""></div>
       <div class="fg" style="grid-column:span 1;">
         <label style="display:flex;align-items:center;justify-content:space-between;">
           <span>Stake (unidades)</span>
@@ -301,7 +315,13 @@ select option{background:var(--s2);}
         </label>
         <input type="number" id="bCuota" step="0.01" placeholder="2.10" oninput="updatePreview()">
       </div>
-      <div class="fg"><label>Nº de Eventos</label><input type="number" id="bEventos" min="1" value="1" placeholder="1"></div>
+      <div class="fg"><label>Nº de Eventos</label>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <button type="button" class="btn-ghost btn-sm" style="padding:8px 12px;font-size:0.9rem;" onclick="stepEventos(-1)">−</button>
+          <input type="number" id="bEventos" min="1" value="1" placeholder="1" style="text-align:center;">
+          <button type="button" class="btn-ghost btn-sm" style="padding:8px 12px;font-size:0.9rem;" onclick="stepEventos(1)">+</button>
+        </div>
+      </div>
       <div class="fg"><label>Deporte</label>
         <select id="bDeporte" onchange="onDeporteChange()">
           <option value="Fútbol Europeo">⚽ Fútbol Europeo</option>
@@ -399,17 +419,6 @@ select option{background:var(--s2);}
     <!-- EXCEPCION AUTO-STAKE -->
     <div id="exceptionRow" style="display:none;margin-bottom:11px;padding:9px 11px;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:8px;">
       <span id="exceptionRowText" style="font-size:0.65rem;color:var(--gold);font-weight:700;">⚠️ Modo excepción activo para esta apuesta.</span>
-    </div>
-
-    <!-- JUGADA -->
-    <div class="jugada-section">
-      <div class="slabel">¿La jugaste vos?</div>
-      <div class="jugada-toggle">
-        <button class="jt-btn" id="jt-played" onclick="setJugada(true)">✅ Sí, la jugué</button>
-        <button class="jt-btn" id="jt-skipped" onclick="setJugada(false)">👁 No, solo registro</button>
-      </div>
-      <div style="font-size:0.6rem;color:var(--muted);margin-top:5px;">Las "no jugadas" analizan el rendimiento real del tipster sin afectar tu profit.</div>
-      <div id="bankBlockWarning" style="display:none;margin-top:8px;padding:8px 11px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.35);border-radius:8px;font-size:0.68rem;color:var(--red);font-weight:700;"></div>
     </div>
 
     <!-- RESULTADO -->
@@ -673,6 +682,10 @@ select option{background:var(--s2);}
       <span id="balDateRangeLabel" style="font-size:0.65rem;color:var(--cyan);font-family:'DM Mono',monospace;"></span>
     </div>
     <div class="chart-wrap-lg"><canvas id="chartBalance"></canvas></div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:9px;font-size:0.62rem;color:var(--muted2);">
+      <span>🟢 <span style="color:var(--green);">┊</span> Depósito</span>
+      <span>🔴 <span style="color:var(--red);">┊</span> Retiro</span>
+    </div>
   </div>
   <div class="card">
     <div class="card-title" id="bal-ranking-title">Ranking de Tipsters (Jugadas) — Más ganador → Más perdedor</div>
@@ -794,7 +807,8 @@ select option{background:var(--s2);}
     <input type="hidden" id="etId">
     <div class="form-grid">
       <div class="fg"><label>Nombre</label><input type="text" id="etName"></div>
-      <div class="fg"><label>Bankroll inicial <span class="opt">(para calcular ROI)</span></label><input type="number" id="etBankroll" placeholder="ej: 1000"></div>
+      <div class="fg"><label>Bankroll inicial <span class="opt">(Jugadas, para calcular ROI)</span></label><input type="number" id="etBankroll" placeholder="ej: 1000"></div>
+      <div class="fg"><label>Bankroll inicial <span class="opt">(No Jugadas, opcional)</span></label><input type="number" id="etBankrollSkip" placeholder="vacío = usa el mismo que Jugadas"></div>
       <div class="fg"><label>Bank de Referencia <span class="opt">(para drawdown real)</span></label><input type="number" id="etBankRef" placeholder="ej: 1000"></div>
     </div>
 
@@ -1055,6 +1069,12 @@ function filterByPeriodEx(bets, p) {
   return filterByPeriod(bets, p);
 }
 
+// Excluye apuestas "Soñadora" y de "Reto" de las estadísticas normales del tipster
+// (WR, Yield, Profit, etc.) — esas apuestas solo se contabilizan en Gráficas -> Soñadoras/Retos.
+// El balance (bank actual) SÍ las sigue incluyendo, por eso las funciones de balance usan t.bets directo.
+function statsBets(bets) {
+  return bets.filter(b => !b.esSonadora && !b.retoId);
+}
 function calcStats(bets, filter = 'all') {
   const fb = filter==='all' ? bets : bets.filter(b => filter==='played' ? b.played : !b.played);
   const closed = fb.filter(b => b.result !== 'pending');
@@ -1098,15 +1118,14 @@ function topStakes(bets, n=3) {
 function renderStakeQuickBtns(t) {
   const el = document.getElementById('stakeQuickBtns'); if (!el) return;
   if (!t) { el.innerHTML = ''; return; }
-  const mode = t.stakeMode || (t.autoStake !== false ? 'avg' : 'off');
-  if (mode === 'off') { el.innerHTML = ''; return; }
-  
-  let stakes = [];
-  if (mode === 'table' && t.stakeTable && t.stakeTable.length) {
-    stakes = t.stakeTable.slice(0, 3).map(r => r.stake);
-  } else {
-    stakes = topStakes(t.bets, 3);
-  }
+
+  // Los 3 botones rápidos siempre reflejan los stakes MÁS USADOS realmente (historial de apuestas),
+  // filtrados por si estás cargando una Jugada o una No Jugada. No dependen del modo de cálculo de
+  // monto (avg/tabla/%bank/off) — esa tabla manual es solo para el cálculo automático del monto,
+  // esto es solo una ayuda para completar rápido.
+  const wantJugada = curJugada === null ? true : curJugada;
+  let stakes = topStakes(t.bets.filter(b => b.played === wantJugada), 3);
+  if (!stakes.length) stakes = topStakes(t.bets, 3); // fallback si todavía no hay historial para esa categoría
   if (!stakes.length) { el.innerHTML = ''; return; }
 
   const curStake = parseFloat(document.getElementById('bStake').value);
@@ -1200,11 +1219,12 @@ function getBankActual(t) {
   return t.bankroll + s.profit;
 }
 function getBankActualSkip(t) {
-  // Bank independiente para "No Jugada / Solo Registro" — arranca del mismo bankroll,
-  // pero acumula su propio profit por separado del de jugadas.
-  if (t.bankroll == null) return null;
+  // Bank independiente para "No Jugada / Solo Registro" — puede tener su propio bankroll inicial
+  // (t.bankrollSkip); si no se configuró, usa el mismo bankroll inicial que "Jugadas".
+  const base = t.bankrollSkip != null ? t.bankrollSkip : t.bankroll;
+  if (base == null) return null;
   const s = calcStats(t.bets, 'skipped');
-  return t.bankroll + s.profit;
+  return base + s.profit;
 }
 function getBankActualFor(t, jugada) {
   return jugada ? getBankActual(t) : getBankActualSkip(t);
@@ -1351,7 +1371,7 @@ function getSortedTipsters() {
   const list = [...data.tipsters];
   if (tipsterSort==='nombre') return list.sort((a,b)=>a.name.localeCompare(b.name));
   return list.sort((a,b)=>{
-    const sa=calcStats(a.bets,'played'), sb=calcStats(b.bets,'played');
+    const sa=calcStats(statsBets(a.bets),'played'), sb=calcStats(statsBets(b.bets),'played');
     if (tipsterSort==='profit')   return sb.profit-sa.profit;
     if (tipsterSort==='yield')    return sb.yield_-sa.yield_;
     if (tipsterSort==='unidades') return sb.uNet-sa.uNet;
@@ -1370,8 +1390,8 @@ function renderTipsterList() {
   el.innerHTML = sorted.map(t => {
     const ci = data.tipsters.indexOf(t);
     const color = COLORS[ci % COLORS.length];
-    const s = calcStats(t.bets, 'played');
-    const sk = calcStats(t.bets, 'skipped');
+    const s = calcStats(statsBets(t.bets), 'played');
+    const sk = calcStats(statsBets(t.bets), 'skipped');
     const pc = t.bets.filter(b=>b.played).length, tc = t.bets.length;
     const ratio = avgStakeRatio(t.bets);
     const roi = t.bankroll && t.bankroll > 0 ? s.profit / t.bankroll * 100 : null;
@@ -1432,7 +1452,8 @@ function renderTipsterBody(t, s, sk, ratio, roi, color) {
       ${bankPico!=null?`<div class="pbox"><div class="pbox-lbl">Bank Pico</div><div class="pbox-val cyan">$${bankPico.toFixed(2)}</div></div>`:''}
       ${retornoPct!=null?`<div class="pbox"><div class="pbox-lbl">Retorno desde inicio</div><div class="pbox-val ${retColor}">${retornoPct>=0?'+':''}${retornoPct.toFixed(2)}%</div></div>`:''}
       ${ddPicoPct!=null?`<div class="pbox"><div class="pbox-lbl">Drawdown desde pico</div><div class="pbox-val ${ddColor}">${ddPicoPct.toFixed(2)}%</div></div>`:''}
-    </div>` : ''}
+    </div>
+    ${bankActualSk!=null?`<div style="font-size:0.58rem;color:var(--muted);margin-top:-4px;margin-bottom:9px;">💡 Bank inicial usado — Jugadas: $${(t.bankroll||0).toFixed(2)} · No Jugadas: $${(t.bankrollSkip!=null?t.bankrollSkip:(t.bankroll||0)).toFixed(2)}${t.bankrollSkip==null?' (mismo que Jugadas, editable en ⚙️)':''}</div>`:''}` : ''}
     ${pending.length ? `
     <div class="section-divider">⏳ Apuestas Activas (${pending.length})</div>
     <div style="overflow-x:auto;margin-bottom:9px;">
@@ -1615,6 +1636,7 @@ function openEditTipsterModal(id) {
   document.getElementById('etId').value = id;
   document.getElementById('etName').value = t.name;
   document.getElementById('etBankroll').value = t.bankroll || '';
+  document.getElementById('etBankrollSkip').value = t.bankrollSkip != null ? t.bankrollSkip : '';
   document.getElementById('etBankRef').value = t.bankReferencia || '';
   let mode = 'avg';
   if (t.stakeMode) mode = t.stakeMode;
@@ -1660,6 +1682,8 @@ function saveEditTipster() {
   const t = data.tipsters.find(t=>t.id===id); if(!t) return;
   t.name = document.getElementById('etName').value.trim() || t.name;
   t.bankroll = parseFloat(document.getElementById('etBankroll').value) || null;
+  const bsVal = document.getElementById('etBankrollSkip').value;
+  t.bankrollSkip = bsVal !== '' ? (parseFloat(bsVal) || null) : null;
   t.bankReferencia = parseFloat(document.getElementById('etBankRef').value) || null;
   t.stakeMode = etStakeMode;
   t.autoStake = etStakeMode !== 'off';
@@ -1764,6 +1788,14 @@ function onTipsterChange() {
   document.getElementById('bPreview').style.display = 'none';
   const t = getSelectedTipster();
   if (t) maybeRefreshBankPctSnapshot(t);
+  // Auto-selecciona Jugada / No Jugada según la tendencia histórica del tipster.
+  // Si hay empate (o todavía no tiene apuestas), se deja sin seleccionar.
+  if (t) {
+    const playedCount = t.bets.filter(b => b.played).length;
+    const skippedCount = t.bets.filter(b => !b.played).length;
+    if (playedCount > skippedCount) setJugada(true);
+    else if (skippedCount > playedCount) setJugada(false);
+  }
   prefillFromTipster(t);
   updateRiskPanel();
   updateBankBlockWarning();
@@ -1952,7 +1984,7 @@ function updateRiskPanel() {
   const cuota = parseFloat(document.getElementById('bCuota').value) || 0;
   const fecha = document.getElementById('bFecha').value;
 
-  const statsPlayed = calcStats(t.bets, 'played');
+  const statsPlayed = calcStats(statsBets(t.bets), 'played');
   const winRate = statsPlayed.closed > 0 ? statsPlayed.wr/100 : 0.5;
 
   const exposicionPrevia = computeExposicionPrevia(t, fecha);
@@ -2454,6 +2486,7 @@ function setJugada(v) {
   document.getElementById('jt-skipped').className='jt-btn'+(v===false?' skipped':'');
   recalcMontoForJugadaContext();
   updateBankBlockWarning();
+  renderStakeQuickBtns(getSelectedTipster());
 }
 function updateBankBlockWarning() {
   const el = document.getElementById('bankBlockWarning');
@@ -2505,6 +2538,13 @@ function updateEditSonadoraBadgeUI() {
   if (!b) return;
   b.className = 'auto-badge' + (editSonadora ? ' on' : '');
   b.textContent = editSonadora ? '🌙 Soñadora: ON' : '🌙 Soñadora: OFF';
+}
+
+function stepEventos(delta) {
+  const el = document.getElementById('bEventos'); if (!el) return;
+  const cur = parseInt(el.value) || 1;
+  const next = Math.max(1, cur + delta);
+  el.value = next;
 }
 
 function refreshExtraTabsIfActive() {
@@ -2706,7 +2746,7 @@ function setTCMetric(m) { tcMetric=m; ['profit','units'].forEach(x=>document.get
 function renderTipsterChart() {
   destroyChart('tcIndividual');
   const t=data.tipsters.find(t=>t.id===tcId); if(!t) return;
-  let bets=t.bets.filter(b=>b.result!=='pending'&&b.fecha);
+  let bets=statsBets(t.bets).filter(b=>b.result!=='pending'&&b.fecha);
   if(tcFilter==='played') bets=bets.filter(b=>b.played);
   else if(tcFilter==='skipped') bets=bets.filter(b=>!b.played);
   if(tcMetric==='units') bets=bets.filter(b=>b.stake);
@@ -2733,7 +2773,7 @@ function updateGlobalStats() {
   let hasBankJug=false, hasBankNoJug=false, hasBankRef=false, hasBankPico=false;
   let enJuego=0;
   data.tipsters.forEach(t=>{
-    const s=calcStats(t.bets,'played'), sk=calcStats(t.bets,'skipped');
+    const s=calcStats(statsBets(t.bets),'played'), sk=calcStats(statsBets(t.bets),'skipped');
     inv+=s.invested; prof+=s.profit; won+=s.won; closed+=s.closed;
     total+=t.bets.length; played+=t.bets.filter(b=>b.played).length;
     invSk+=sk.invested; profSk+=sk.profit; wonSk+=sk.won; closedSk+=sk.closed;
@@ -2799,18 +2839,31 @@ function computeBalanceSeries(view) {
   ensureBalanceData();
   const inicial = data.balanceAdj.inicial || 0;
   const wantPlayed = view === 'jugadas';
-  const betEvents = data.tipsters
+
+  // Las apuestas del mismo día se agrupan en un solo punto (para no saturar la gráfica),
+  // pero cada ingreso/retiro queda como SU PROPIO punto individual con marcador.
+  const betsByDate = {};
+  data.tipsters
     .flatMap(t => t.bets.filter(b => b.played === wantPlayed && b.result !== 'pending' && b.fecha))
-    .map(b => ({ fecha: b.fecha, delta: calcProfit(b) }));
-  const movEvents = wantPlayed ? data.balanceMovs.map(m => ({ fecha: m.fecha, delta: m.tipo==='ingreso' ? m.monto : -m.monto })) : [];
-  const allEvents = [...betEvents, ...movEvents];
-  const dateMap = {};
-  allEvents.forEach(e => { if (!e.fecha) return; dateMap[e.fecha] = (dateMap[e.fecha]||0) + e.delta; });
-  const dates = Object.keys(dateMap).sort();
-  const labels = ['Inicio'], values = [parseFloat(inicial.toFixed(2))];
+    .forEach(b => { betsByDate[b.fecha] = (betsByDate[b.fecha]||0) + calcProfit(b); });
+
+  const events = Object.keys(betsByDate).map(d => ({ fecha:d, delta:betsByDate[d], marker:null }));
+  if (wantPlayed) {
+    data.balanceMovs.forEach(m => {
+      events.push({ fecha:m.fecha, delta: m.tipo==='ingreso' ? m.monto : -m.monto, marker: { kind:m.tipo, monto:m.monto } });
+    });
+  }
+  events.sort((a,b) => a.fecha.localeCompare(b.fecha)); // sort estable: mantiene el orden de inserción entre iguales
+
+  const labels = ['Inicio'], values = [parseFloat(inicial.toFixed(2))], markers = [null];
   let running = inicial;
-  dates.forEach(d => { running += dateMap[d]; labels.push(d); values.push(parseFloat(running.toFixed(2))); });
-  return { labels, values, baseline: inicial };
+  events.forEach(e => {
+    running += e.delta;
+    labels.push(e.fecha);
+    values.push(parseFloat(running.toFixed(2)));
+    markers.push(e.marker);
+  });
+  return { labels, values, markers, baseline: inicial };
 }
 function setBalancePeriod(p) {
   balPeriod = p;
@@ -2894,9 +2947,37 @@ function renderBalanceMovsHistory() {
       <td><button class="btn-del" onclick="deleteBalanceMov(${m.id})">🗑</button></td>
     </tr>`).join('')}</tbody></table></div>`;
 }
+let balancePluginRegistered = false;
+function ensureBalancePlugin() {
+  if (balancePluginRegistered || typeof Chart === 'undefined') return;
+  Chart.register({
+    id: 'balanceMovLines',
+    afterDatasetsDraw(chart, args, opts) {
+      const markers = opts && opts.markers;
+      if (!markers || !markers.length) return;
+      const meta = chart.getDatasetMeta(0);
+      const { ctx, chartArea } = chart;
+      if (!chartArea || !meta) return;
+      markers.forEach((m, i) => {
+        if (!m) return;
+        const pt = meta.data[i];
+        if (!pt) return;
+        ctx.save();
+        ctx.strokeStyle = m.kind === 'ingreso' ? '#22c55e' : '#ef4444';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(pt.x, chartArea.top);
+        ctx.lineTo(pt.x, chartArea.bottom);
+        ctx.stroke();
+        ctx.restore();
+      });
+    }
+  });
+  balancePluginRegistered = true;
+}
 function renderBalanceChart() {
   const full = computeBalanceSeries(balView);
-  let labels = full.labels, values = full.values;
+  let labels = full.labels, values = full.values, markers = full.markers;
   if (balPeriod === 'custom' && (balDateFrom || balDateTo)) {
     const from = balDateFrom, to = balDateTo;
     const idxs = [];
@@ -2909,12 +2990,13 @@ function renderBalanceChart() {
     if (idxs.length === 0) {
       let startVal = values[0];
       if (from) { for (let i = labels.length-1; i >= 0; i--) { if (i===0 || labels[i] < from) { startVal = values[i]; break; } } }
-      labels = ['Período']; values = [startVal];
+      labels = ['Período']; values = [startVal]; markers = [null];
     } else {
       const firstIdx = idxs[0];
       const startVal = values[firstIdx-1];
       labels = ['Período', ...idxs.map(i => labels[i])];
       values = [startVal, ...idxs.map(i => values[i])];
+      markers = [null, ...idxs.map(i => markers[i])];
     }
   } else if (balPeriod !== 'all') {
     const now = new Date(), d = new Date(now);
@@ -2929,17 +3011,43 @@ function renderBalanceChart() {
     if (idx > 0) {
       labels = ['Período', ...labels.slice(idx)];
       values = [values[idx-1], ...values.slice(idx)];
+      markers = [null, ...markers.slice(idx)];
     }
   }
+  ensureBalancePlugin();
   destroyChart('cBalance');
   const c = document.getElementById('chartBalance')?.getContext('2d');
   const color = balView==='jugadas' ? '#6c63ff' : '#e879f9';
+  const pointColors = values.map((v,i) => {
+    if (markers[i]) return markers[i].kind === 'ingreso' ? '#22c55e' : '#ef4444';
+    return i===0 ? color : (v>=values[i-1] ? '#22c55e' : '#ef4444');
+  });
+  const pointRadii = values.map((v,i) => markers[i] ? 6 : (values.length>60 ? 0 : 4));
   if (c) charts.cBalance = new Chart(c, { type:'line', data:{ labels, datasets:[{
     label: balView==='jugadas' ? 'Balance Jugadas ($)' : 'Balance No Jugadas ($)', data: values, borderColor:color, backgroundColor: balView==='jugadas' ? 'rgba(108,99,255,.12)' : 'rgba(232,121,249,.12)',
-    fill:true, tension:0.4, pointRadius: values.length>60?0:4, pointHoverRadius:6,
-    pointBackgroundColor: values.map((v,i)=> i===0?color:(v>=values[i-1]?'#22c55e':'#ef4444')),
-    pointBorderColor:'transparent'
-  }]}, options: cOpts('$') });
+    fill:true, tension:0.4, pointRadius: pointRadii, pointHoverRadius: values.map((v,i)=>markers[i]?8:6),
+    pointBackgroundColor: pointColors,
+    pointBorderColor: values.map((v,i)=> markers[i] ? '#fff' : 'transparent'),
+    pointBorderWidth: values.map((v,i)=> markers[i] ? 2 : 0)
+  }] }, options: {
+    ...cOpts('$'),
+    plugins: {
+      ...cOpts('$').plugins,
+      balanceMovLines: { markers },
+      tooltip: {
+        backgroundColor:'#131720', titleColor:'#e2e8f0', bodyColor:'#e2e8f0', borderColor:'#222736', borderWidth:1, padding:9,
+        titleFont:{family:"'DM Mono',monospace",size:11}, bodyFont:{family:"'DM Mono',monospace",size:11},
+        callbacks: {
+          label: (ctx) => {
+            const lines = ['Balance actual: $' + ctx.parsed.y.toFixed(2)];
+            const m = markers[ctx.dataIndex];
+            if (m) lines.push((m.kind==='ingreso' ? '💵 Depósito: +$' : '🏧 Retiro: -$') + m.monto.toFixed(2));
+            return lines;
+          }
+        }
+      }
+    }
+  } });
 }
 function renderBalanceRanking() {
   const el = document.getElementById('balanceRanking'); if (!el) return;
@@ -3188,8 +3296,8 @@ function renderUnidades() {
   updateUnitTipsterFilter();
   const allTs=unitTipster==='all'?data.tipsters:data.tipsters.filter(t=>t.id==unitTipster);
 
-  const bpAll=allTs.flatMap(t=>t.bets.filter(b=>b.played&&b.stake&&b.result!=='pending'));
-  const bsAll=allTs.flatMap(t=>t.bets.filter(b=>!b.played&&b.stake&&b.result!=='pending'));
+  const bpAll=allTs.flatMap(t=>statsBets(t.bets).filter(b=>b.played&&b.stake&&b.result!=='pending'));
+  const bsAll=allTs.flatMap(t=>statsBets(t.bets).filter(b=>!b.played&&b.stake&&b.result!=='pending'));
 
   const bp = filterUnitPeriod(bpAll.slice());
   const bs = filterUnitPeriod(bsAll.slice());
@@ -3310,7 +3418,7 @@ function getActiveTipsters(){
 }
 function getFilteredBets(){
   let ts=getActiveTipsters();
-  let bets=ts.flatMap(t=>t.bets.map(b=>({...b,tipsterName:t.name})));
+  let bets=ts.flatMap(t=>statsBets(t.bets).map(b=>({...b,tipsterName:t.name})));
   if(chartFilter==='played') bets=bets.filter(b=>b.played);
   else if(chartFilter==='skipped') bets=bets.filter(b=>!b.played);
   return filterByPeriodEx(bets,chartPeriod);
@@ -3353,7 +3461,7 @@ function renderCharts(){
   if(c3) charts.cTypes=new Chart(c3,{type:'bar',data:{labels:tl,datasets:[{label:'Profit',data:tv,backgroundColor:tv.map(v=>v>=0?'rgba(34,197,94,.6)':'rgba(239,68,68,.6)'),borderColor:tv.map(v=>v>=0?'#22c55e':'#ef4444'),borderWidth:1}]},options:cOpts('$')});
 
   destroyChart('cJugadas');
-  let allB=filterByPeriodEx(getActiveTipsters().flatMap(t=>t.bets),chartPeriod).filter(b=>b.result!=='pending');
+  let allB=filterByPeriodEx(getActiveTipsters().flatMap(t=>statsBets(t.bets)),chartPeriod).filter(b=>b.result!=='pending');
   const pb2=allB.filter(b=>b.played),sb2=allB.filter(b=>!b.played);
   const pP=pb2.reduce((s,b)=>s+calcProfit(b),0),sP=sb2.reduce((s,b)=>s+calcProfit(b),0);
   const pI=pb2.reduce((s,b)=>s+(b.monto||0),0),sI=sb2.reduce((s,b)=>s+(b.monto||0),0);
@@ -3373,11 +3481,11 @@ function renderCharts(){
   destroyChart('cAll');
   if (multiMode) {
     const allDates=new Set();
-    activeTips.forEach(t=>t.bets.forEach(b=>{if(b.fecha)allDates.add(b.fecha);}));
+    activeTips.forEach(t=>t.bets.forEach(b=>{if(b.fecha&&!b.esSonadora&&!b.retoId)allDates.add(b.fecha);}));
     const allSortedDates=filterByPeriodEx([...allDates].sort().map(d=>({fecha:d})),chartPeriod).map(x=>x.fecha);
     if(allSortedDates.length){
       const datasets=activeTips.map((t,i)=>{
-        let b=t.bets.filter(x=>x.result!=='pending'&&x.fecha);
+        let b=statsBets(t.bets).filter(x=>x.result!=='pending'&&x.fecha);
         if(chartFilter==='played') b=b.filter(x=>x.played);
         else if(chartFilter==='skipped') b=b.filter(x=>!x.played);
         const dm={};b.forEach(x=>{if(!dm[x.fecha])dm[x.fecha]=0;dm[x.fecha]+=calcProfit(x);});
@@ -3394,14 +3502,14 @@ function renderCharts(){
   destroyChart('cYield');
   if (multiMode) {
     const rL=activeTips.map(t=>t.name);
-    const rP=activeTips.map(t=>parseFloat(calcStats(filterByPeriodEx(t.bets,chartPeriod),'played').yield_.toFixed(1)));
-    const rS=activeTips.map(t=>parseFloat(calcStats(filterByPeriodEx(t.bets,chartPeriod),'skipped').yield_.toFixed(1)));
+    const rP=activeTips.map(t=>parseFloat(calcStats(filterByPeriodEx(statsBets(t.bets),chartPeriod),'played').yield_.toFixed(1)));
+    const rS=activeTips.map(t=>parseFloat(calcStats(filterByPeriodEx(statsBets(t.bets),chartPeriod),'skipped').yield_.toFixed(1)));
     const c6=document.getElementById('chartYieldComparison')?.getContext('2d');
     if(c6) charts.cYield=new Chart(c6,{type:'bar',data:{labels:rL,datasets:[{label:'✅ Yield Jugadas',data:rP,backgroundColor:rP.map(v=>v>=0?'rgba(34,197,94,.6)':'rgba(239,68,68,.6)'),borderColor:rP.map(v=>v>=0?'#22c55e':'#ef4444'),borderWidth:1},{label:'👁 Yield No Jugadas',data:rS,backgroundColor:rS.map(v=>v>=0?'rgba(6,182,212,.55)':'rgba(251,146,60,.65)'),borderColor:rS.map(v=>v>=0?'#06b6d4':'#fb923c'),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#e2e8f0',font:{family:'DM Sans'}}}},scales:{x:{ticks:{color:'#6b7694'},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#6b7694',callback:v=>v+'%'},grid:{color:'rgba(255,255,255,.04)'}}}}});
   }
 
   destroyChart('cROI');
-  const roiAllBets = filterByPeriodEx(activeTips.flatMap(t=>t.bets.map(b=>({...b,tName:t.name}))),chartPeriod)
+  const roiAllBets = filterByPeriodEx(activeTips.flatMap(t=>statsBets(t.bets).map(b=>({...b,tName:t.name}))),chartPeriod)
     .filter(b=>b.result!=='pending'&&b.fecha);
   const roiMap={p:{},s:{},a:{}};
   roiAllBets.forEach(b=>{
@@ -3524,6 +3632,7 @@ window.updateRiskPanel=updateRiskPanel;
 window.toggleSonadora=toggleSonadora;
 window.toggleEditSonadora=toggleEditSonadora;
 window.importData=importData;
+window.stepEventos=stepEventos;
 window.setBalancePeriod=setBalancePeriod;
 window.setBalDateRange=setBalDateRange;
 window.clearBalDateRange=clearBalDateRange;
