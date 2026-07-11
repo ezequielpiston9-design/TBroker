@@ -133,6 +133,11 @@ select option{background:var(--s2);}
 .badge-played{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.3);}
 .badge-skipped{background:rgba(232,121,249,.12);color:var(--pink);border:1px solid rgba(232,121,249,.3);}
 .types-tags{display:flex;flex-wrap:wrap;gap:3px;}
+.desc-cell{display:flex;align-items:center;gap:5px;}
+.desc-text{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle;}
+.desc-text.expanded{max-width:260px;white-space:normal;overflow:visible;text-overflow:clip;}
+.desc-toggle{cursor:pointer;color:var(--muted);font-size:0.55rem;flex-shrink:0;user-select:none;padding:2px 3px;transition:color .15s;}
+.desc-toggle:hover{color:var(--accent);}
 .type-tag{background:rgba(108,99,255,.12);color:var(--accent);border:1px solid rgba(108,99,255,.2);padding:1px 4px;border-radius:4px;font-size:0.54rem;font-weight:700;}
 /* CHARTS */
 .chart-wrap{position:relative;height:255px;margin-top:11px;}
@@ -295,6 +300,19 @@ select option{background:var(--s2);}
       </div>
       <div style="font-size:0.6rem;color:var(--muted);margin-top:5px;">Las "no jugadas" analizan el rendimiento real del tipster sin afectar tu profit.</div>
       <div id="bankBlockWarning" style="display:none;margin-top:8px;padding:8px 11px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.35);border-radius:8px;font-size:0.68rem;color:var(--red);font-weight:700;"></div>
+    </div>
+
+    <!-- EXPOSICIÓN GLOBAL: cuánto tenés en juego sumando TODOS los tipsters, contra tu balance real -->
+    <div class="card" id="globalExpoPanel" style="background:rgba(6,182,212,.05);border-color:rgba(6,182,212,.2);margin-bottom:11px;">
+      <div class="card-title" style="color:var(--cyan);">🌐 Exposición Global (todos los tipsters)</div>
+      <div class="pboxes">
+        <div class="pbox"><div class="pbox-lbl">En juego (todos)</div><div class="pbox-val gold" id="ge-enjuego">$0</div></div>
+        <div class="pbox"><div class="pbox-lbl">+ Esta apuesta</div><div class="pbox-val" id="ge-estaapuesta">$0</div></div>
+        <div class="pbox"><div class="pbox-lbl">Balance Actual Global</div><div class="pbox-val cyan" id="ge-balance">$0</div></div>
+        <div class="pbox"><div class="pbox-lbl">Disponible después</div><div class="pbox-val-lg" id="ge-disponible">$0</div></div>
+        <div class="pbox"><div class="pbox-lbl">% del balance comprometido</div><div class="pbox-val" id="ge-pct">0%</div></div>
+      </div>
+      <div style="font-size:0.58rem;color:var(--muted);margin-top:6px;">Esto suma lo que está en juego en TODOS los tipsters (no solo el que elegiste), contra tu Balance Actual real de la pestaña Balance.</div>
     </div>
 
     <div class="form-grid">
@@ -735,7 +753,7 @@ select option{background:var(--s2);}
     <input type="hidden" id="editBetId"><input type="hidden" id="editTipsterId">
     <div class="form-grid">
       <div class="fg"><label>Descripción <span class="opt">(opcional)</span></label><input type="text" id="eDesc"></div>
-      <div class="fg"><label>Stake</label><input type="number" id="eStake" step="0.5"></div>
+      <div class="fg"><label>Stake</label><input type="number" id="eStake" step="0.5" oninput="recalcEditMontoForJugadaContext()"></div>
       <div class="fg"><label>Monto ($)</label><input type="number" id="eMonto"></div>
       <div class="fg"><label>Cuota</label><input type="number" id="eCuota" step="0.01"></div>
       <div class="fg"><label>Nº Eventos</label><input type="number" id="eEventos" min="1"></div>
@@ -1075,6 +1093,21 @@ function filterByPeriodEx(bets, p) {
 function statsBets(bets) {
   return bets.filter(b => !b.esSonadora && !b.retoId);
 }
+function descCell(b, ns) {
+  const idKey = ns + '-' + b.id;
+  const text = `${b.retoId?'🎯':''}${b.esSonadora?'🌙':''}${(b.retoId||b.esSonadora)?' ':''}${b.desc||'—'}`;
+  return `<td><div class="desc-cell">
+    <span class="desc-text" id="descText-${idKey}">${text}</span>
+    <span class="desc-toggle" onclick="toggleDescExpand('${idKey}')" id="descArrow-${idKey}">▼</span>
+  </div></td>`;
+}
+function toggleDescExpand(idKey) {
+  const el = document.getElementById('descText-'+idKey);
+  const arrow = document.getElementById('descArrow-'+idKey);
+  if (!el) return;
+  const isExp = el.classList.toggle('expanded');
+  if (arrow) arrow.textContent = isExp ? '▲' : '▼';
+}
 function calcStats(bets, filter = 'all') {
   const fb = filter==='all' ? bets : bets.filter(b => filter==='played' ? b.played : !b.played);
   const closed = fb.filter(b => b.result !== 'pending');
@@ -1339,7 +1372,7 @@ function switchTab(id) {
   ['tipsters','nueva','unidades','graficas','balance','apuestas'].forEach((x,i)=>{ if(x===id) document.querySelectorAll('.tab:not(.subtab)')[i]?.classList.add('active'); });
   if (id==='graficas') { updateChartTipsterFilter(); setGraficasSubView(graficasSubView); }
   if (id==='unidades') { updateUnitTipsterFilter(); renderUnidades(); }
-  if (id==='nueva') { renderRetoInfoPanel(); updateRiskPanel(); }
+  if (id==='nueva') { renderRetoInfoPanel(); updateRiskPanel(); updateGlobalExpoPanel(); }
   if (id==='balance') { renderBalanceTab(); }
   if (id==='apuestas') { updateApuestasTipsterFilter(); renderApuestasList(); }
 }
@@ -1462,7 +1495,7 @@ function renderTipsterBody(t, s, sk, ratio, roi, color) {
     </tr></thead><tbody>
     ${pending.map(b=>`<tr class="${b.played?'':'row-skipped'}">
       <td>${b.fecha||'—'}</td>
-      <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;">${b.retoId?'🎯':''}${b.esSonadora?'🌙':''}${(b.retoId||b.esSonadora)?' ':''}${b.desc||'—'}</td>
+      ${descCell(b, 'tp')}
       <td><div class="types-tags">${(b.types||[]).map(tp=>`<span class="type-tag">${tp}</span>`).join('')}</div></td>
       <td style="font-family:'DM Mono',monospace;">${b.stake?b.stake+'u':'—'}</td>
       <td>$${(b.monto||0).toFixed(0)}</td>
@@ -1536,7 +1569,7 @@ function renderBetsTable(t, sortKey) {
     const p=calcProfit(b), u=calcUnits(b);
     return `<tr class="${b.played?'':'row-skipped'}">
       <td>${b.fecha||'—'}</td>
-      <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;">${b.retoId?'🎯':''}${b.esSonadora?'🌙':''}${(b.retoId||b.esSonadora)?' ':''}${b.desc||'—'}</td>
+      ${descCell(b, 'tb')}
       <td><div class="types-tags">${(b.types||[]).map(tp=>`<span class="type-tag">${tp}</span>`).join('')}</div></td>
       <td style="font-family:'DM Mono',monospace;">${b.stake?b.stake+'u':'—'}</td>
       <td>$${(b.monto||0).toFixed(0)}</td>
@@ -1799,6 +1832,7 @@ function onTipsterChange() {
   prefillFromTipster(t);
   updateRiskPanel();
   updateBankBlockWarning();
+  updateGlobalExpoPanel();
 }
 
 function toggleAutoStake() {
@@ -1909,6 +1943,7 @@ function onStakeInput() {
     btn.classList.toggle('active', parseFloat(btn.textContent) === curStake);
   });
   updatePreview();
+  updateGlobalExpoPanel();
 }
 
 function onMontoInput() {
@@ -1923,6 +1958,7 @@ function onMontoInput() {
     }
   }
   updatePreview();
+  updateGlobalExpoPanel();
 }
 
 function updatePreview() {
@@ -1948,6 +1984,33 @@ function updatePreview() {
 // ============================================================
 // CALCULADORA DE RIESGO EN VIVO
 // ============================================================
+function getGlobalEnJuego() {
+  return data.tipsters.reduce((s,t) => s + t.bets.filter(b => b.played && b.result==='pending').reduce((s2,b) => s2+(b.monto||0), 0), 0);
+}
+function getGlobalBalanceActual() {
+  ensureBalanceData();
+  const inicial = data.balanceAdj.inicial || 0;
+  const totalIng = data.balanceMovs.filter(m => m.tipo==='ingreso').reduce((s,m) => s+m.monto, 0);
+  const totalRet = data.balanceMovs.filter(m => m.tipo==='retiro').reduce((s,m) => s+m.monto, 0);
+  // El balance SÍ incluye Soñadoras/Retos (a propósito, ver statsBets), por eso usamos t.bets directo.
+  let profitTotal = 0;
+  data.tipsters.forEach(t => { profitTotal += calcStats(t.bets, 'played').profit; });
+  return inicial + totalIng - totalRet + profitTotal;
+}
+function updateGlobalExpoPanel() {
+  const panel = document.getElementById('globalExpoPanel'); if (!panel) return;
+  const enJuego = getGlobalEnJuego();
+  const estaApuesta = (curJugada === false) ? 0 : (parseFloat(document.getElementById('bMonto')?.value) || 0);
+  const balance = getGlobalBalanceActual();
+  const disponible = balance - enJuego - estaApuesta;
+  const pct = balance > 0 ? ((enJuego + estaApuesta) / balance * 100) : 0;
+  const se = (id,txt,cls) => { const e=document.getElementById(id); if(e){ e.textContent=txt; if(cls) e.className = (id==='ge-disponible'?'pbox-val-lg ':'pbox-val ')+cls; } };
+  se('ge-enjuego', '$'+enJuego.toFixed(2), enJuego>0?'gold':'');
+  se('ge-estaapuesta', (estaApuesta>0?'+$'+estaApuesta.toFixed(2):'$0'), '');
+  se('ge-balance', '$'+balance.toFixed(2), balance>=0?'cyan':'red');
+  se('ge-disponible', fmt(disponible), disponible>=0?'green':'red');
+  se('ge-pct', pct.toFixed(1)+'%', pct<=50?'green':pct<=80?'gold':'red');
+}
 function updateRiskPanel() {
   const panel = document.getElementById('riskPanel');
   if (!panel) return;
@@ -2487,6 +2550,7 @@ function setJugada(v) {
   recalcMontoForJugadaContext();
   updateBankBlockWarning();
   renderStakeQuickBtns(getSelectedTipster());
+  updateGlobalExpoPanel();
 }
 function updateBankBlockWarning() {
   const el = document.getElementById('bankBlockWarning');
@@ -2619,6 +2683,7 @@ function saveBet() {
     document.getElementById('bStake').value=''; document.getElementById('bMonto').value=''; document.getElementById('bCuota').value=''; document.getElementById('bPreview').style.display='none';
   }
   updateRiskPanel();
+  updateGlobalExpoPanel();
   showToast(retoEndedMsg || '✅ Apuesta guardada', !retoEndedMsg || retoEndedMsg.indexOf('🏆')>=0);
 }
 
@@ -2697,6 +2762,16 @@ function setEditJugada(v) {
   editJugada=v;
   document.getElementById('ejt-played').className='jt-btn'+(v===true?' played':'');
   document.getElementById('ejt-skipped').className='jt-btn'+(v===false?' skipped':'');
+  recalcEditMontoForJugadaContext();
+}
+function recalcEditMontoForJugadaContext() {
+  const tid = parseInt(document.getElementById('editTipsterId').value);
+  const t = data.tipsters.find(tp => tp.id === tid);
+  if (!t) return;
+  const stake = parseFloat(document.getElementById('eStake').value);
+  if (isNaN(stake) || stake <= 0) return;
+  const monto = resolveMontoFromStake(t, stake, editJugada);
+  if (monto != null) document.getElementById('eMonto').value = monto.toFixed(2);
 }
 function toggleEditChip(el) { el.classList.toggle('selected'); }
 function saveEditBet() {
@@ -3184,7 +3259,7 @@ function renderApuestasList() {
     return `<tr class="${b.played?'':'row-skipped'}">
       <td>${b.fecha||'—'}</td>
       <td>${b.tipsterName}</td>
-      <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;">${b.retoId?'🎯':''}${b.esSonadora?'🌙':''}${(b.retoId||b.esSonadora)?' ':''}${b.desc||'—'}</td>
+      ${descCell(b, 'ap')}
       <td><div class="types-tags">${(b.types||[]).map(tp=>`<span class="type-tag">${tp}</span>`).join('')}</div></td>
       <td style="font-family:'DM Mono',monospace;">${b.stake?b.stake+'u':'—'}</td>
       <td>$${(b.monto||0).toFixed(0)}</td>
@@ -3599,7 +3674,9 @@ window.setTCPeriod=setTCPeriod;
 window.setTCFilter=setTCFilter;
 window.setTCMetric=setTCMetric;
 window.setResult=setResult;
+window.toggleDescExpand=toggleDescExpand;
 window.setJugada=setJugada;
+window.recalcEditMontoForJugadaContext=recalcEditMontoForJugadaContext;
 window.toggleChip=toggleChip;
 window.updatePreview=updatePreview;
 window.onTipsterChange=onTipsterChange;
