@@ -372,11 +372,12 @@ select option{background:var(--s2);}
         <div class="pbox"><div class="pbox-lbl">Próx. Apuesta</div><div class="pbox-val purple" id="rp-next">$0</div></div>
         <div class="pbox"><div class="pbox-lbl">% del bank</div><div class="pbox-val gold" id="rp-pct">0%</div></div>
         <div class="pbox"><div class="pbox-lbl">Progreso</div><div class="pbox-val" id="rp-step">—</div></div>
-        <div class="pbox"><div class="pbox-lbl">Win Rate (al iniciar)</div><div class="pbox-val gold" id="rp-winrate">N/A</div></div>
-        <div class="pbox"><div class="pbox-lbl">Cuota Media (al iniciar)</div><div class="pbox-val gold" id="rp-cuotamedia">N/A</div></div>
+        <div class="pbox"><div class="pbox-lbl">Win Rate (del tipster)</div><div class="pbox-val gold" id="rp-winrate">N/A</div></div>
+        <div class="pbox"><div class="pbox-lbl">Cuota Media (del tipster)</div><div class="pbox-val gold" id="rp-cuotamedia">N/A</div></div>
       </div>
       <div class="section-actions">
         <button class="btn btn-ghost btn-sm" onclick="finalizeReto()">✅ Finalizar reto (ganado)</button>
+        <button class="btn btn-ghost btn-sm" onclick="cancelActiveReto()" style="color:var(--muted2);">🚫 Cancelar (no cuenta)</button>
       </div>
     </div>
 
@@ -616,6 +617,7 @@ select option{background:var(--s2);}
           <button class="flt-btn" id="rf-completado" onclick="setRetosFilterEstado('completado')">🏆 Completados</button>
           <button class="flt-btn" id="rf-finalizado" onclick="setRetosFilterEstado('finalizado')">✅ Cerrados a mano</button>
           <button class="flt-btn" id="rf-perdido" onclick="setRetosFilterEstado('perdido')">❌ Perdidos</button>
+          <button class="flt-btn" id="rf-cancelado" onclick="setRetosFilterEstado('cancelado')">🚫 Cancelados</button>
         </div>
       </div>
     </div>
@@ -752,7 +754,12 @@ select option{background:var(--s2);}
     <div class="modal-title">✏️ Editar Apuesta</div>
     <input type="hidden" id="editBetId"><input type="hidden" id="editTipsterId">
     <div class="form-grid">
-      <div class="fg"><label>Descripción <span class="opt">(opcional)</span></label><input type="text" id="eDesc"></div>
+      <div class="fg">
+        <label>Descripción <span class="opt">(opcional)</span>
+          <span class="desc-toggle" onclick="toggleEditDescExpand()" id="eDescArrow" style="margin-left:5px;">▼ expandir</span>
+        </label>
+        <textarea id="eDesc" rows="1" style="width:100%;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:8px 11px;border-radius:8px;font-family:'DM Mono',monospace;font-size:0.78rem;outline:none;resize:none;overflow:hidden;transition:none;"></textarea>
+      </div>
       <div class="fg"><label>Stake</label><input type="number" id="eStake" step="0.5" oninput="recalcEditMontoForJugadaContext()"></div>
       <div class="fg"><label>Monto ($)</label><input type="number" id="eMonto"></div>
       <div class="fg"><label>Cuota</label><input type="number" id="eCuota" step="0.01"></div>
@@ -838,8 +845,18 @@ select option{background:var(--s2);}
         <button class="rt-btn" id="etMode-avg"    onclick="setETMode('avg')"    style="flex:1;min-width:110px;">📊 Promedio histórico</button>
         <button class="rt-btn" id="etMode-bankpct" onclick="setETMode('bankpct')" style="flex:1;min-width:110px;">📈 % del Bank</button>
         <button class="rt-btn" id="etMode-table"  onclick="setETMode('table')"  style="flex:1;min-width:110px;">📋 Tabla manual</button>
+        <button class="rt-btn" id="etMode-default" onclick="setETMode('default')" style="flex:1;min-width:110px;">🎯 Stake Default</button>
       </div>
       <div id="etModeDesc" style="font-size:0.62rem;color:var(--muted);margin-top:6px;"></div>
+    </div>
+
+    <!-- STAKE DEFAULT (visible solo en modo default) -->
+    <div id="etDefaultSection" style="display:none;margin-bottom:13px;">
+      <div class="form-grid">
+        <div class="fg"><label>Stake (u)</label><input type="number" id="etDefaultStake" min="0.5" step="0.5" placeholder="ej: 1"></div>
+        <div class="fg"><label>Monto equivalente ($)</label><input type="number" id="etDefaultMonto" min="1" step="1" placeholder="ej: 100"></div>
+      </div>
+      <div style="font-size:0.6rem;color:var(--muted);margin-top:4px;">⚠️ Este valor es GLOBAL: se aplica a todos los tipsters que uses en modo Stake Default (no es por tipster). Cualquier otro stake se escala proporcionalmente — ej: si 1u=$100, entonces 2u=$200 automático.</div>
     </div>
 
     <!-- % DEL BANK (visible solo en modo bankpct) -->
@@ -884,9 +901,13 @@ select option{background:var(--s2);}
     <!-- AUTO-CUOTA SETTING -->
     <div style="margin-bottom:13px;">
       <div class="fg" style="margin-bottom:8px;"><label>Auto-Cuota</label></div>
-      <div style="display:flex;align-items:center;gap:10px;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
         <button class="auto-badge on" id="etAutoCuota" onclick="toggleETAutoCuota()">📐 Auto activado</button>
         <span style="font-size:0.62rem;color:var(--muted);">Al seleccionar el tipster, la cuota se pre-rellena con su cuota media histórica. Desactivable por apuesta.</span>
+      </div>
+      <div class="fg" style="margin-top:9px;">
+        <label>Cuota media sugerida <span class="opt">(manual, opcional — se usa si todavía no hay historial)</span></label>
+        <input type="number" id="etCuotaSugerida" step="0.01" placeholder="ej: 1.85">
       </div>
     </div>
 
@@ -1005,6 +1026,7 @@ function initApp() {
   if (ls) { try { data = JSON.parse(ls); } catch(e){} }
   if (!data.retos) data.retos = [];
   ensureBalanceData();
+  ensureGlobalStakeDefault();
   data.tipsters.forEach(t => { refreshBankPico(t); maybeRefreshBankPctSnapshot(t); });
   renderAll();
   setSyncStatus('connecting');
@@ -1021,6 +1043,7 @@ function startFB() {
       data = remote;
       if (!data.retos) data.retos = [];
       ensureBalanceData();
+      ensureGlobalStakeDefault();
       localStorage.setItem('tipsterbook_v4', JSON.stringify(data));
       renderAll();
     }
@@ -1100,6 +1123,15 @@ function descCell(b, ns) {
     <span class="desc-text" id="descText-${idKey}">${text}</span>
     <span class="desc-toggle" onclick="toggleDescExpand('${idKey}')" id="descArrow-${idKey}">▼</span>
   </div></td>`;
+}
+function toggleEditDescExpand() {
+  const el = document.getElementById('eDesc');
+  const arrow = document.getElementById('eDescArrow');
+  if (!el) return;
+  const expanded = el.rows > 1;
+  el.rows = expanded ? 1 : 4;
+  el.style.overflow = expanded ? 'hidden' : 'auto';
+  if (arrow) arrow.textContent = expanded ? '▼ expandir' : '▲ contraer';
 }
 function toggleDescExpand(idKey) {
   const el = document.getElementById('descText-'+idKey);
@@ -1540,6 +1572,7 @@ function renderTipsterBody(t, s, sk, ratio, roi, color) {
         t.stakeMode==='off' ? '✏️ Auto-stake OFF' :
         t.stakeMode==='table' ? '📋 Tabla manual (' + (t.stakeTable||[]).length + ' filas)' :
         t.stakeMode==='bankpct' ? '📈 % del Bank (ref. cada 30d, ≈$' + (resolveMontoFromStake(t,1)||0).toFixed(2) + '/u)' :
+        t.stakeMode==='default' ? '🎯 Stake Default (≈$' + (resolveMontoFromStake(t,1)||0).toFixed(2) + '/u)' :
         '📊 Auto (promedio)'
       }</span>
     </div>
@@ -1609,12 +1642,13 @@ const ET_MODE_DESC = {
   off:   'El monto no se calcula automáticamente. Lo ingresás vos siempre.',
   avg:   'Al tipear el stake, el monto se calcula usando el promedio histórico de tus apuestas ($ apostados ÷ stake).',
   bankpct: 'El monto por unidad de stake es un % fijo de un BANK DE REFERENCIA (no el bank en vivo). Esa referencia se actualiza sola cada 30 días, o cuando guardás esta pantalla (eso cuenta como "actualizar ahora").',
-  table: 'Definís vos la tabla: stake 1 = $X, stake 2 = $Y, etc. Coincidencia exacta; sino cae al promedio como fallback.'
+  table: 'Definís vos la tabla: stake 1 = $X, stake 2 = $Y, etc. Coincidencia exacta; sino cae al promedio como fallback.',
+  default: 'Un único valor stake=monto que configurás UNA VEZ (es global, para todos los tipsters que usen este modo) y de ahí se escala proporcionalmente. Ideal para casos generales donde no necesitás una tabla ni promedio histórico.'
 };
 
 function setETMode(mode) {
   etStakeMode = mode;
-  ['off','avg','bankpct','table'].forEach(m => {
+  ['off','avg','bankpct','table','default'].forEach(m => {
     const btn = document.getElementById('etMode-'+m);
     if (btn) btn.className = 'rt-btn' + (m === mode ? ' win' : '');
   });
@@ -1622,6 +1656,8 @@ function setETMode(mode) {
   document.getElementById('etTableSection').style.display = mode === 'table' ? 'block' : 'none';
   const bpSection = document.getElementById('etBankPctSection');
   if (bpSection) bpSection.style.display = mode === 'bankpct' ? 'block' : 'none';
+  const defSection = document.getElementById('etDefaultSection');
+  if (defSection) defSection.style.display = mode === 'default' ? 'block' : 'none';
 }
 
 function addETRow(jugada, stake='', monto='') {
@@ -1700,6 +1736,11 @@ function openEditTipsterModal(id) {
   const acBtn = document.getElementById('etAutoCuota');
   const acOn = t.autoCuota !== false;
   if (acBtn) { acBtn.className = 'auto-badge' + (acOn ? ' on' : ''); acBtn.textContent = acOn ? '📐 Auto activado' : '✏️ Manual'; }
+  document.getElementById('etCuotaSugerida').value = t.cuotaMediaSugerida != null ? t.cuotaMediaSugerida : '';
+  ensureGlobalStakeDefault();
+  const defStakeEl = document.getElementById('etDefaultStake'), defMontoEl = document.getElementById('etDefaultMonto');
+  if (defStakeEl) defStakeEl.value = data.globalStakeDefault.stake;
+  if (defMontoEl) defMontoEl.value = data.globalStakeDefault.monto;
   document.getElementById('editTipsterModal').style.display = 'flex';
 }
 function toggleETAutoCuota() {
@@ -1737,8 +1778,16 @@ function saveEditTipster() {
     t.bankPctSnapshot = bankActualNow;
     t.bankPctSnapshotDate = new Date().toISOString().split('T')[0];
   }
+  if (etStakeMode === 'default') {
+    const dStake = parseFloat(document.getElementById('etDefaultStake').value);
+    const dMonto = parseFloat(document.getElementById('etDefaultMonto').value);
+    if (!dStake || dStake <= 0 || !dMonto || dMonto <= 0) return showAlert('Completá el stake y el monto equivalente para Stake Default.');
+    data.globalStakeDefault = { stake: dStake, monto: dMonto };
+  }
   const acBtn = document.getElementById('etAutoCuota');
   t.autoCuota = acBtn ? acBtn.classList.contains('on') : true;
+  const cmVal = document.getElementById('etCuotaSugerida').value;
+  t.cuotaMediaSugerida = cmVal !== '' ? (parseFloat(cmVal) || null) : null;
   refreshBankPico(t);
   save(); renderAll(); closeEditTipsterModal(); showToast('✅ Tipster actualizado');
 }
@@ -1776,7 +1825,8 @@ function prefillFromTipster(t) {
   }
   if (!betCuotaException && t.autoCuota !== false) {
     const ac = avgCuota(t.bets);
-    if (ac !== null) document.getElementById('bCuota').value = ac.toFixed(2);
+    const acFinal = ac !== null ? ac : (t.cuotaMediaSugerida || null);
+    if (acFinal !== null) document.getElementById('bCuota').value = acFinal.toFixed(2);
   }
   renderStakeQuickBtns(t);
   const sport = mostUsedSport(t.bets);
@@ -1890,9 +1940,19 @@ function isAutoActive() {
   return mode !== 'off';
 }
 
+function ensureGlobalStakeDefault() {
+  if (!data.globalStakeDefault || !data.globalStakeDefault.stake || !data.globalStakeDefault.monto) {
+    data.globalStakeDefault = { stake: 1, monto: 100 };
+  }
+}
 function resolveMontoFromStake(t, stake, jugada=null) {
   const mode = t.stakeMode || (t.autoStake !== false ? 'avg' : 'off');
   if (mode === 'off') return null;
+  if (mode === 'default') {
+    ensureGlobalStakeDefault();
+    const gd = data.globalStakeDefault;
+    return gd.stake > 0 ? stake * (gd.monto / gd.stake) : null;
+  }
   if (mode === 'bankpct') {
     const bankRef = getBankPctReference(t);
     if (bankRef == null || !t.stakeUnitPct) return null;
@@ -1911,6 +1971,11 @@ function resolveMontoFromStake(t, stake, jugada=null) {
 function resolveStakeFromMonto(t, monto, jugada=null) {
   const mode = t.stakeMode || (t.autoStake !== false ? 'avg' : 'off');
   if (mode === 'off') return null;
+  if (mode === 'default') {
+    ensureGlobalStakeDefault();
+    const gd = data.globalStakeDefault;
+    return gd.monto > 0 ? monto / (gd.monto / gd.stake) : null;
+  }
   if (mode === 'bankpct') {
     const bankRef = getBankPctReference(t);
     if (bankRef == null || !t.stakeUnitPct) return null;
@@ -2239,8 +2304,11 @@ function renderRetoInfoPanel() {
   else if (reto.mode === 'p501') stepLabel = 'Intento ' + (step+1) + '/2';
   else if (reto.mode === 'p503') stepLabel = 'Intento ' + (step+1) + '/3';
   document.getElementById('rp-step').textContent = stepLabel;
-  const wrEl = document.getElementById('rp-winrate'); if (wrEl) wrEl.textContent = reto.winRateInicial!=null ? reto.winRateInicial.toFixed(1)+'%' : 'N/A';
-  const cmEl = document.getElementById('rp-cuotamedia'); if (cmEl) cmEl.textContent = reto.cuotaMediaInicial!=null ? reto.cuotaMediaInicial.toFixed(2) : 'N/A';
+  const t = data.tipsters.find(x => x.id === reto.tipsterId);
+  const liveWr = t ? calcStats(statsBets(t.bets), 'played').wr : null;
+  const liveCm = t ? (avgCuota(t.bets) !== null ? avgCuota(t.bets) : (t.cuotaMediaSugerida || null)) : null;
+  const wrEl = document.getElementById('rp-winrate'); if (wrEl) wrEl.textContent = liveWr!=null ? liveWr.toFixed(1)+'%' : 'N/A';
+  const cmEl = document.getElementById('rp-cuotamedia'); if (cmEl) cmEl.textContent = liveCm!=null ? liveCm.toFixed(2) : 'N/A';
 }
 
 function applyRetoStakeToForm() {
@@ -2250,6 +2318,9 @@ function applyRetoStakeToForm() {
   const frac = getRetoFraction(reto);
   const monto = reto.bankActual * frac;
   document.getElementById('bMonto').value = monto.toFixed(2);
+  // El "stake" en modo Reto no son unidades estándar: mostramos el % del bank del reto
+  // que representa esta apuesta, para que el campo no quede con un número sin sentido.
+  document.getElementById('bStake').value = (frac * 100).toFixed(0);
   renderRetoInfoPanel();
   updatePreview();
 }
@@ -2304,6 +2375,45 @@ function recomputeReto(retoId) {
   save();
 }
 
+function cancelActiveReto() {
+  if (!activeRetoId) return;
+  cancelarReto(activeRetoId);
+}
+function cancelarReto(retoId) {
+  const reto = data.retos.find(r => r.id === retoId);
+  if (!reto) return;
+  showConfirm('¿Cancelar este reto? No va a contar como ganado ni perdido en ninguna estadística, pero las apuestas ya registradas quedan en su historial.', () => {
+    reto.estado = 'cancelado';
+    reto.fechaFin = reto.fechaFin || new Date().toISOString().split('T')[0];
+    if (activeRetoId === retoId) {
+      retoModeOn = false; activeRetoId = null;
+      updateRetoToggleUI();
+      const rip = document.getElementById('retoInfoPanel'); if (rip) rip.style.display = 'none';
+      updateRiskPanel();
+    }
+    save();
+    showToast('🚫 Reto cancelado (no cuenta en las estadísticas)');
+    renderRetos();
+    renderGraficasRetos();
+  });
+}
+function eliminarReto(retoId) {
+  showConfirm('¿Eliminar este reto por completo? Las apuestas que ya registraste con este reto NO se borran, pero dejan de estar marcadas como "de reto" (vuelven a contar en las estadísticas normales del tipster). Esta acción no se puede deshacer.', () => {
+    data.retos = data.retos.filter(r => r.id !== retoId);
+    data.tipsters.forEach(t => { t.bets.forEach(b => { if (b.retoId === retoId) b.retoId = null; }); });
+    if (activeRetoId === retoId) {
+      retoModeOn = false; activeRetoId = null;
+      updateRetoToggleUI();
+      const rip = document.getElementById('retoInfoPanel'); if (rip) rip.style.display = 'none';
+      updateRiskPanel();
+    }
+    save();
+    renderAll();
+    showToast('🗑 Reto eliminado');
+    renderRetos();
+    renderGraficasRetos();
+  });
+}
 function finalizeReto() {
   if (!activeRetoId) return;
   const reto = data.retos.find(r => r.id === activeRetoId);
@@ -2332,8 +2442,8 @@ function setRetosFilterTipster(id, el) {
 function setRetosFilterEstado(est) {
   retosFilterEstado = est;
   document.querySelectorAll('#gsv-retos .filter-bar .flt-btn').forEach(b=>b.classList.remove('a-all','a-played','a-skipped'));
-  const map = {all:'rf-all', activo:'rf-activo', completado:'rf-completado', finalizado:'rf-finalizado', perdido:'rf-perdido'};
-  const activeClass = {all:'a-all', activo:'a-played', completado:'a-played', finalizado:'a-played', perdido:'a-skipped'};
+  const map = {all:'rf-all', activo:'rf-activo', completado:'rf-completado', finalizado:'rf-finalizado', perdido:'rf-perdido', cancelado:'rf-cancelado'};
+  const activeClass = {all:'a-all', activo:'a-played', completado:'a-played', finalizado:'a-played', perdido:'a-skipped', cancelado:'a-skipped'};
   const btn = document.getElementById(map[est]);
   if (btn) btn.classList.add(activeClass[est]);
   renderRetos();
@@ -2355,10 +2465,13 @@ function renderRetos() {
   if (!retos.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🎯</div><p>Sin retos para este filtro.</p></div>'; return; }
   el.innerHTML = retos.map(r => {
     const t = data.tipsters.find(x=>x.id===r.tipsterId);
+    const liveWr = t ? calcStats(statsBets(t.bets), 'played').wr : null;
+    const liveCm = t ? (avgCuota(t.bets) !== null ? avgCuota(t.bets) : (t.cuotaMediaSugerida || null)) : null;
     const ganado = isRetoGanado(r.estado);
-    const estColor = r.estado==='activo'?'#06b6d4':ganado?'#22c55e':'#ef4444';
-    const estClass = r.estado==='activo'?'cyan':ganado?'green':'red';
-    const estLabel = r.estado==='activo'?'🟡 Activo':r.estado==='completado'?'🏆 Completado':r.estado==='finalizado'?'✅ Cerrado a mano':'❌ Perdido';
+    const cancelado = r.estado === 'cancelado';
+    const estColor = r.estado==='activo'?'#06b6d4':cancelado?'#6b7694':ganado?'#22c55e':'#ef4444';
+    const estClass = r.estado==='activo'?'cyan':cancelado?'':ganado?'green':'red';
+    const estLabel = r.estado==='activo'?'🟡 Activo':cancelado?'🚫 Cancelado':r.estado==='completado'?'🏆 Completado':r.estado==='finalizado'?'✅ Cerrado a mano':'❌ Perdido';
     const mult = r.bankInicial>0 ? (r.bankActual/r.bankInicial) : 0;
     const objetivo = r.objetivo || 10;
     return `<div class="tipster-card">
@@ -2374,10 +2487,15 @@ function renderRetos() {
           <div class="tip-stat"><div class="tip-stat-lbl">Bank Inicial</div><div class="tip-stat-val">$${r.bankInicial.toFixed(0)}</div></div>
           <div class="tip-stat"><div class="tip-stat-lbl">Bank Actual</div><div class="tip-stat-val ${estClass}">$${r.bankActual.toFixed(2)}</div></div>
           <div class="tip-stat"><div class="tip-stat-lbl">Progreso</div><div class="tip-stat-val gold">x${mult.toFixed(2)} de x${objetivo}</div></div>
-          <div class="tip-stat"><div class="tip-stat-lbl">Win Rate</div><div class="tip-stat-val gold">${r.winRateInicial!=null?r.winRateInicial.toFixed(1)+'%':'N/A'}</div></div>
-          <div class="tip-stat"><div class="tip-stat-lbl">Cuota Media</div><div class="tip-stat-val gold">${r.cuotaMediaInicial!=null?r.cuotaMediaInicial.toFixed(2):'N/A'}</div></div>
-          <span class="badge badge-${r.estado==='activo'?'pending':ganado?'win':'loss'}">${estLabel}</span>
+          <div class="tip-stat"><div class="tip-stat-lbl">Win Rate (tipster)</div><div class="tip-stat-val gold">${liveWr!=null?liveWr.toFixed(1)+'%':'N/A'}</div></div>
+          <div class="tip-stat"><div class="tip-stat-lbl">Cuota Media (tipster)</div><div class="tip-stat-val gold">${liveCm!=null?liveCm.toFixed(2):'N/A'}</div></div>
+          <span class="badge badge-${r.estado==='activo'?'pending':cancelado?'void':ganado?'win':'loss'}">${estLabel}</span>
         </div>
+      </div>
+      <div class="section-actions" style="padding:0 13px 11px;">
+        ${r.estado==='activo'?`<button class="btn-sm btn-ghost" onclick="cancelarReto(${r.id})" style="color:var(--muted2);">🚫 Cancelar (no cuenta)</button>`:''}
+        ${!cancelado&&r.estado!=='activo'?`<button class="btn-sm btn-ghost" onclick="cancelarReto(${r.id})" style="color:var(--muted2);">🚫 Marcar como cancelado</button>`:''}
+        <button class="btn-del btn-sm" onclick="eliminarReto(${r.id})">🗑 Eliminar</button>
       </div>
       <div class="tipster-body open" style="padding:13px;">
         ${(r.historial && r.historial.length) ? `<table class="bets-table"><thead><tr><th>Fecha</th><th>Descripción</th><th>Monto</th><th>Cuota</th><th>Resultado</th><th>Bank antes</th><th>Bank después</th></tr></thead><tbody>
@@ -2405,7 +2523,7 @@ function setGraficasSubView(view) {
 }
 
 function getArchivedRetos() {
-  return data.retos.filter(r => r.estado !== 'activo');
+  return data.retos.filter(r => r.estado !== 'activo' && r.estado !== 'cancelado');
 }
 function retoReturnPct(r) {
   return r.bankInicial > 0 ? (r.bankActual / r.bankInicial - 1) * 100 : 0;
@@ -2736,6 +2854,9 @@ function openEditModal(tid, bid) {
   document.getElementById('editBetId').value=bid;
   document.getElementById('editTipsterId').value=tid;
   document.getElementById('eDesc').value=b.desc||'';
+  document.getElementById('eDesc').rows=1;
+  document.getElementById('eDesc').style.overflow='hidden';
+  const eDescArrow = document.getElementById('eDescArrow'); if (eDescArrow) eDescArrow.textContent='▼ expandir';
   document.getElementById('eStake').value=b.stake||'';
   document.getElementById('eMonto').value=b.monto;
   document.getElementById('eCuota').value=b.cuota;
@@ -3630,7 +3751,7 @@ function exportData(){
 function importData(ev){
   const f=ev.target.files[0];if(!f)return;
   const r=new FileReader();
-  r.onload=e=>{try{data=JSON.parse(e.target.result); if(!data.retos) data.retos=[]; ensureBalanceData(); data.tipsters.forEach(t=>{refreshBankPico(t);maybeRefreshBankPctSnapshot(t);}); save();renderAll();showToast('✅ Datos importados');}catch{showToast('❌ Archivo inválido',false);}};
+  r.onload=e=>{try{data=JSON.parse(e.target.result); if(!data.retos) data.retos=[]; ensureBalanceData(); ensureGlobalStakeDefault(); data.tipsters.forEach(t=>{refreshBankPico(t);maybeRefreshBankPctSnapshot(t);}); save();renderAll();showToast('✅ Datos importados');}catch{showToast('❌ Archivo inválido',false);}};
   r.readAsText(f);ev.target.value='';
 }
 
@@ -3674,6 +3795,7 @@ window.setTCPeriod=setTCPeriod;
 window.setTCFilter=setTCFilter;
 window.setTCMetric=setTCMetric;
 window.setResult=setResult;
+window.toggleEditDescExpand=toggleEditDescExpand;
 window.toggleDescExpand=toggleDescExpand;
 window.setJugada=setJugada;
 window.recalcEditMontoForJugadaContext=recalcEditMontoForJugadaContext;
@@ -3703,6 +3825,9 @@ window.selectRetoMode=selectRetoMode;
 window.confirmRetoBank=confirmRetoBank;
 window.cancelRetoFlow=cancelRetoFlow;
 window.finalizeReto=finalizeReto;
+window.cancelActiveReto=cancelActiveReto;
+window.cancelarReto=cancelarReto;
+window.eliminarReto=eliminarReto;
 window.setRetosFilterTipster=setRetosFilterTipster;
 window.setRetosFilterEstado=setRetosFilterEstado;
 window.updateRiskPanel=updateRiskPanel;
