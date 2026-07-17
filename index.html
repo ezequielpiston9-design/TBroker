@@ -83,6 +83,7 @@ select option{background:var(--s2);}
 .jt-btn{flex:1;padding:10px;border:2px solid var(--border);border-radius:9px;background:var(--s2);color:var(--muted2);font-family:'DM Sans',sans-serif;font-size:0.8rem;font-weight:700;cursor:pointer;transition:all .18s;text-align:center;}
 .jt-btn.played{border-color:var(--green);background:rgba(34,197,94,.12);color:var(--green);}
 .jt-btn.retiro-sel{border-color:var(--red);background:rgba(239,68,68,.12);color:var(--red);}
+.jt-btn.ajuste-sel{border-color:var(--gold);background:rgba(245,158,11,.12);color:var(--gold);}
 .jt-btn.skipped{border-color:var(--pink);background:rgba(232,121,249,.12);color:var(--pink);}
 /* RESULT */
 .result-toggle{display:flex;gap:5px;flex-wrap:wrap;}
@@ -142,6 +143,7 @@ select option{background:var(--s2);}
 /* CHARTS */
 .chart-wrap{position:relative;height:255px;margin-top:11px;}
 .chart-wrap-lg{position:relative;height:310px;}
+.chart-wrap-xl{position:relative;height:420px;margin-top:11px;}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
 @media(max-width:640px){.two-col{grid-template-columns:1fr;}}
 /* FILTER/SORT BARS */
@@ -371,9 +373,13 @@ select option{background:var(--s2);}
         <div class="pbox"><div class="pbox-lbl">Bank Actual</div><div class="pbox-val cyan" id="rp-bankcur">$0</div></div>
         <div class="pbox"><div class="pbox-lbl">Próx. Apuesta</div><div class="pbox-val purple" id="rp-next">$0</div></div>
         <div class="pbox"><div class="pbox-lbl">% del bank</div><div class="pbox-val gold" id="rp-pct">0%</div></div>
-        <div class="pbox"><div class="pbox-lbl">Progreso</div><div class="pbox-val" id="rp-step">—</div></div>
-        <div class="pbox"><div class="pbox-lbl">Win Rate (del tipster)</div><div class="pbox-val gold" id="rp-winrate">N/A</div></div>
-        <div class="pbox"><div class="pbox-lbl">Cuota Media (del tipster)</div><div class="pbox-val gold" id="rp-cuotamedia">N/A</div></div>
+        <div class="pbox"><div class="pbox-lbl">Cuota Media / Win Rate (del Tipster)</div>
+          <div style="display:flex;gap:7px;justify-content:center;align-items:baseline;flex-wrap:wrap;">
+            <span class="pbox-val gold" id="rp-cuotamedia">N/A</span>
+            <span style="color:var(--muted);font-size:0.62rem;">/</span>
+            <span class="pbox-val gold" id="rp-winrate">N/A</span>
+          </div>
+        </div>
       </div>
       <div class="section-actions">
         <button class="btn btn-ghost btn-sm" onclick="finalizeReto()">✅ Finalizar reto (ganado)</button>
@@ -393,8 +399,13 @@ select option{background:var(--s2);}
           <div class="pbox"><div class="pbox-lbl">% del Bank (esta apuesta)</div><div class="pbox-val-lg" id="rk-stakepct">0%</div></div>
           <div class="pbox" id="rk-exp-box"><div class="pbox-lbl" id="rk-exp-lbl">Exposición Total Hoy</div><div class="pbox-val-lg" id="rk-exppct">0%</div></div>
           <div class="pbox"><div class="pbox-lbl">Bank si Pierde</div><div class="pbox-val" id="rk-bankpierde">$0</div></div>
-          <div class="pbox"><div class="pbox-lbl">Retorno desde el Inicio</div><div class="pbox-val" id="rk-retorno">0%</div></div>
-          <div class="pbox"><div class="pbox-lbl">Drawdown desde el Pico</div><div class="pbox-val" id="rk-ddpico">0%</div></div>
+          <div class="pbox"><div class="pbox-lbl">Retorno / Drawdown</div>
+            <div style="display:flex;gap:7px;justify-content:center;align-items:baseline;flex-wrap:wrap;">
+              <span class="pbox-val" id="rk-retorno">0%</span>
+              <span style="color:var(--muted);font-size:0.62rem;">/</span>
+              <span class="pbox-val" id="rk-ddpico">-0%</span>
+            </div>
+          </div>
           <div class="pbox"><div class="pbox-lbl">Prob. perder 2 seguidas</div><div class="pbox-val" id="rk-prob2">0%</div></div>
         </div>
         <div class="section-divider">🎲 Simulación a Futuro (100 apuestas, 2000 escenarios)</div>
@@ -414,7 +425,7 @@ select option{background:var(--s2);}
         <div class="chip" data-val="Ganador" onclick="toggleChip(this)">🏆 Ganador</div>
         <div class="chip" data-val="Ganador 1/2" onclick="toggleChip(this)">½ Mitad</div>
         <div class="chip" data-val="Goles" onclick="toggleChip(this)">⚽ Goles</div>
-        <div class="chip" data-val="Asian Market" onclick="toggleChip(this)">🎌 AM</div>
+        <div class="chip" data-val="Ambos Marcan" onclick="toggleChip(this)">🥅 AM</div>
         <div class="chip" data-val="Hándicap" onclick="toggleChip(this)">📐 Hándicap</div>
         <div class="chip" data-val="Over" onclick="toggleChip(this)">📈 Over</div>
         <div class="chip" data-val="Under" onclick="toggleChip(this)">📉 Under</div>
@@ -578,16 +589,19 @@ select option{background:var(--s2);}
     <div class="stat-box"><div class="stat-lbl">Yield</div><div class="stat-val cyan" id="cs-yield">0%</div></div>
     <div class="stat-box"><div class="stat-lbl">Win Rate</div><div class="stat-val gold" id="cs-wr">0%</div></div>
     <div class="stat-box"><div class="stat-lbl">Stake prom.</div><div class="stat-val" id="cs-stake">0u</div></div>
+    <div class="stat-box"><div class="stat-lbl">Cuota media ganada</div><div class="stat-val green" id="cs-cuotawin">—</div></div>
+    <div class="stat-box"><div class="stat-lbl">Cuota media perdida</div><div class="stat-val red" id="cs-cuotaloss">—</div></div>
   </div>
   <div class="two-col">
     <div class="card"><div class="card-title">Profit Acumulado</div><div class="chart-wrap"><canvas id="chartProfit"></canvas></div></div>
     <div class="card"><div class="card-title">Distribución Resultados</div><div class="chart-wrap"><canvas id="chartResults"></canvas></div></div>
   </div>
-  <div class="card"><div class="card-title">Profit por Tipo</div><div class="chart-wrap"><canvas id="chartTypes"></canvas></div></div>
-  <div class="card" id="cardAllTipsters"><div class="card-title">Profit Acumulado por Tipster</div><div class="chart-wrap-lg"><canvas id="chartAllTipsters"></canvas></div></div>
+  <div class="card"><div class="card-title">Profit por Tipo <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;">(combinaciones exactas de tipo, ej. "Ganador + Under" es una sola barra)</span></div><div class="chart-wrap"><canvas id="chartTypes"></canvas></div></div>
+  <div class="card" id="cardAllTipsters"><div class="card-title">Profit Acumulado por Tipster</div><div class="chart-wrap-xl" id="chartAllTipstersWrap"><canvas id="chartAllTipsters"></canvas></div></div>
   <div class="card" id="cardYieldComp"><div class="card-title">Yield Jugadas vs No Jugadas por Tipster</div><div class="chart-wrap"><canvas id="chartYieldComparison"></canvas></div></div>
   <div class="card"><div class="card-title">ROI Mensual por Tipster</div><div class="chart-wrap-lg"><canvas id="chartROIMonthly"></canvas></div></div>
-  <div class="card"><div class="card-title">Cuota Media: Ganadas vs Perdidas</div><div class="chart-wrap"><canvas id="chartCuotaWL"></canvas></div></div>
+  <div class="card"><div class="card-title">Cuota Media: Ganadas vs Perdidas (por tipster)</div><div class="chart-wrap"><canvas id="chartCuotaWL"></canvas></div></div>
+  <div class="card"><div class="card-title">Efectividad por Rango de Cuota <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;">(agrupado cada 0.05, top 10 rangos más jugados)</span></div><div class="chart-wrap"><canvas id="chartCuotaRango"></canvas></div></div>
   </div>
 
   <!-- SUB-VISTA: RETOS -->
@@ -659,29 +673,13 @@ select option{background:var(--s2);}
       </div>
       <div class="pbox" id="bal-totaling-box"><div class="pbox-lbl">💵 Total Ingresado</div><div class="pbox-val green" id="bal-totaling">$0</div></div>
       <div class="pbox" id="bal-totalret-box"><div class="pbox-lbl">🏧 Total Retirado</div><div class="pbox-val red" id="bal-totalret">$0</div></div>
+      <div class="pbox" id="bal-totalajuste-box"><div class="pbox-lbl">🔧 Total Ajustes</div><div class="pbox-val" id="bal-totalajuste">$0</div></div>
       <div class="pbox"><div class="pbox-lbl" id="bal-profit-lbl">Profit Total (jug)</div><div class="pbox-val" id="bal-profit">$0</div></div>
       <div class="pbox"><div class="pbox-lbl">Retorno</div><div class="pbox-val" id="bal-retorno">—</div></div>
       <div class="pbox"><div class="pbox-lbl">Tipster líder 🏆</div><div class="pbox-val gold" id="bal-top">—</div></div>
       <div class="pbox"><div class="pbox-lbl">Tipster en rojo 📉</div><div class="pbox-val red" id="bal-bottom">—</div></div>
     </div>
     <div style="font-size:0.6rem;color:var(--muted);margin-top:8px;" id="bal-desc">El balance parte de un balance inicial editable (podés dejarlo en 0 y cargar todo por historial), suma los ingresos, resta los retiros, y suma el profit acumulado de todas las apuestas jugadas. Cada apuesta ganada lo sube, cada perdida lo baja.</div>
-  </div>
-  <div class="card" style="margin-bottom:11px;" id="bal-hist-card">
-    <div class="card-title">📜 Historial de Ingresos / Retiros</div>
-    <div class="form-grid" style="margin-bottom:9px;">
-      <div class="fg"><label>Tipo</label>
-        <div class="jugada-toggle">
-          <button class="jt-btn played" id="movTipo-ingreso" onclick="setMovTipo('ingreso')">💵 Ingreso</button>
-          <button class="jt-btn" id="movTipo-retiro" onclick="setMovTipo('retiro')">🏧 Retiro</button>
-        </div>
-      </div>
-      <div class="fg"><label>Monto</label><input type="number" id="movMonto" step="0.01" placeholder="0"></div>
-      <div class="fg"><label>Fecha</label><input type="date" id="movFecha"></div>
-      <div class="fg"><label>Nota <span class="opt">(opcional)</span></label><input type="text" id="movNota" placeholder="Ej: transferencia banco"></div>
-    </div>
-    <button class="btn btn-primary" onclick="addBalanceMov()">➕ Agregar Movimiento</button>
-    <div class="section-divider">Historial (más nuevo primero)</div>
-    <div id="balanceMovsHistory"></div>
   </div>
   <div class="card" style="margin-bottom:11px;">
     <div class="card-title" id="bal-chart-title">Evolución del Balance (Jugadas)</div>
@@ -705,11 +703,31 @@ select option{background:var(--s2);}
     <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:9px;font-size:0.62rem;color:var(--muted2);">
       <span>🟢 <span style="color:var(--green);">┊</span> Depósito</span>
       <span>🔴 <span style="color:var(--red);">┊</span> Retiro</span>
+      <span>🟠 <span style="color:var(--gold);">┊</span> Ajuste</span>
     </div>
   </div>
-  <div class="card">
+  <div class="card" style="margin-bottom:11px;">
     <div class="card-title" id="bal-ranking-title">Ranking de Tipsters (Jugadas) — Más ganador → Más perdedor</div>
     <div id="balanceRanking"></div>
+  </div>
+  <div class="card" id="bal-hist-card">
+    <div class="card-title">📜 Historial de Ingresos / Retiros / Ajustes</div>
+    <div class="form-grid" style="margin-bottom:9px;">
+      <div class="fg"><label>Tipo</label>
+        <div class="jugada-toggle">
+          <button class="jt-btn played" id="movTipo-ingreso" onclick="setMovTipo('ingreso')">💵 Ingreso</button>
+          <button class="jt-btn" id="movTipo-retiro" onclick="setMovTipo('retiro')">🏧 Retiro</button>
+          <button class="jt-btn" id="movTipo-ajuste" onclick="setMovTipo('ajuste')">🔧 Ajuste</button>
+        </div>
+      </div>
+      <div class="fg" id="movMontoWrap"><label>Monto</label><input type="number" id="movMonto" step="0.01" placeholder="0"></div>
+      <div class="fg"><label>Fecha</label><input type="date" id="movFecha"></div>
+      <div class="fg"><label>Nota <span class="opt">(opcional)</span></label><input type="text" id="movNota" placeholder="Ej: transferencia banco"></div>
+    </div>
+    <div id="movAjusteHint" style="display:none;font-size:0.6rem;color:var(--muted);margin:-4px 0 9px;">🔧 Ajuste: usalo para devoluciones, correcciones u otros cambios de balance que no son ni un depósito ni un retiro típico. Podés poner el monto en negativo si el ajuste resta.</div>
+    <button class="btn btn-primary" onclick="addBalanceMov()">➕ Agregar Movimiento</button>
+    <div class="section-divider">Historial (más nuevo primero)</div>
+    <div id="balanceMovsHistory"></div>
   </div>
 </div>
 
@@ -785,7 +803,7 @@ select option{background:var(--s2);}
         <div class="chip" data-val="Ganador" onclick="toggleEditChip(this)">🏆 Ganador</div>
         <div class="chip" data-val="Ganador 1/2" onclick="toggleEditChip(this)">½ Mitad</div>
         <div class="chip" data-val="Goles" onclick="toggleEditChip(this)">⚽ Goles</div>
-        <div class="chip" data-val="Asian Market" onclick="toggleEditChip(this)">🎌 AM</div>
+        <div class="chip" data-val="Ambos Marcan" onclick="toggleEditChip(this)">🥅 AM</div>
         <div class="chip" data-val="Hándicap" onclick="toggleEditChip(this)">📐 Hándicap</div>
         <div class="chip" data-val="Over" onclick="toggleEditChip(this)">📈 Over</div>
         <div class="chip" data-val="Under" onclick="toggleEditChip(this)">📉 Under</div>
@@ -1027,6 +1045,7 @@ function initApp() {
   if (!data.retos) data.retos = [];
   ensureBalanceData();
   ensureGlobalStakeDefault();
+  migrateOldTypeLabels();
   data.tipsters.forEach(t => { refreshBankPico(t); maybeRefreshBankPctSnapshot(t); });
   renderAll();
   setSyncStatus('connecting');
@@ -1044,6 +1063,7 @@ function startFB() {
       if (!data.retos) data.retos = [];
       ensureBalanceData();
       ensureGlobalStakeDefault();
+      migrateOldTypeLabels();
       localStorage.setItem('tipsterbook_v4', JSON.stringify(data));
       renderAll();
     }
@@ -1642,7 +1662,7 @@ const ET_MODE_DESC = {
   off:   'El monto no se calcula automáticamente. Lo ingresás vos siempre.',
   avg:   'Al tipear el stake, el monto se calcula usando el promedio histórico de tus apuestas ($ apostados ÷ stake).',
   bankpct: 'El monto por unidad de stake es un % fijo de un BANK DE REFERENCIA (no el bank en vivo). Esa referencia se actualiza sola cada 30 días, o cuando guardás esta pantalla (eso cuenta como "actualizar ahora").',
-  table: 'Definís vos la tabla: stake 1 = $X, stake 2 = $Y, etc. Coincidencia exacta; sino cae al promedio como fallback.',
+  table: 'Definís vos la tabla: stake 1 = $X, stake 2 = $Y, etc. Si escribís un stake que no está en la tabla, no queda huérfano: se escala proporcionalmente usando la fila más cercana como referencia (ej: si solo cargaste 1u=$100, un stake de 3u te va a dar $300 automático).',
   default: 'Un único valor stake=monto que configurás UNA VEZ (es global, para todos los tipsters que usen este modo) y de ahí se escala proporcionalmente. Ideal para casos generales donde no necesitás una tabla ni promedio histórico.'
 };
 
@@ -1940,6 +1960,15 @@ function isAutoActive() {
   return mode !== 'off';
 }
 
+function migrateOldTypeLabels() {
+  data.tipsters.forEach(t => {
+    t.bets.forEach(b => {
+      if (b.types && b.types.includes('Asian Market')) {
+        b.types = b.types.map(tp => tp === 'Asian Market' ? 'Ambos Marcan' : tp);
+      }
+    });
+  });
+}
 function ensureGlobalStakeDefault() {
   if (!data.globalStakeDefault || !data.globalStakeDefault.stake || !data.globalStakeDefault.monto) {
     data.globalStakeDefault = { stake: 1, monto: 100 };
@@ -1963,6 +1992,14 @@ function resolveMontoFromStake(t, stake, jugada=null) {
     if (jugada !== null) row = t.stakeTable.find(r => r.stake === stake && (r.jugada !== false) === jugada);
     if (!row) row = t.stakeTable.find(r => r.stake === stake);
     if (row) return row.monto;
+    // No hay fila exacta para este stake: escalamos proporcionalmente usando la fila
+    // de referencia más cercana (de la categoría jugada/no-jugada correcta si existe).
+    let refRows = jugada !== null ? t.stakeTable.filter(r => (r.jugada !== false) === jugada) : t.stakeTable;
+    if (!refRows.length) refRows = t.stakeTable;
+    if (refRows.length) {
+      const ref = refRows.reduce((best, r) => Math.abs(r.stake - stake) < Math.abs(best.stake - stake) ? r : best, refRows[0]);
+      if (ref.stake > 0) return stake * (ref.monto / ref.stake);
+    }
   }
   const ratio = avgStakeRatio(t.bets, jugada);
   return ratio ? stake * ratio : null;
@@ -1987,6 +2024,14 @@ function resolveStakeFromMonto(t, monto, jugada=null) {
     if (jugada !== null) row = t.stakeTable.find(r => r.monto === monto && (r.jugada !== false) === jugada);
     if (!row) row = t.stakeTable.find(r => r.monto === monto);
     if (row) return row.stake;
+    // No hay fila exacta para este monto: escalamos proporcionalmente usando la fila
+    // de referencia más cercana (de la categoría jugada/no-jugada correcta si existe).
+    let refRows = jugada !== null ? t.stakeTable.filter(r => (r.jugada !== false) === jugada) : t.stakeTable;
+    if (!refRows.length) refRows = t.stakeTable;
+    if (refRows.length) {
+      const ref = refRows.reduce((best, r) => Math.abs(r.monto - monto) < Math.abs(best.monto - monto) ? r : best, refRows[0]);
+      if (ref.monto > 0) return monto / (ref.monto / ref.stake);
+    }
   }
   const ratio = avgStakeRatio(t.bets, jugada);
   return ratio ? monto / ratio : null;
@@ -2163,7 +2208,7 @@ function updateRiskPanel() {
   retornoEl.className = 'pbox-val ' + (retornoPct>=0?'green':'red');
   const ddLevel = drawdownPicoPct<=0.15 ? 'green' : drawdownPicoPct<=0.35 ? 'yellow' : 'red';
   const ddEl = document.getElementById('rk-ddpico');
-  ddEl.textContent = (drawdownPicoPct*100).toFixed(2) + '%';
+  ddEl.textContent = '-' + (drawdownPicoPct*100).toFixed(2) + '%';
   ddEl.className = 'pbox-val ' + (ddLevel==='green'?'green':ddLevel==='yellow'?'gold':'red');
   document.getElementById('rk-prob2').textContent = (probPerder2*100).toFixed(1) + '%';
 
@@ -2294,16 +2339,6 @@ function renderRetoInfoPanel() {
   document.getElementById('rp-bankcur').textContent = '$' + reto.bankActual.toFixed(2);
   document.getElementById('rp-next').textContent = '$' + next.toFixed(2);
   document.getElementById('rp-pct').textContent = (frac*100).toFixed(1) + '%';
-  let stepLabel = '—';
-  const step = reto.step || 0;
-  if (reto.mode === 'escalera') {
-    const mult = reto.bankInicial > 0 ? reto.bankActual / reto.bankInicial : 1;
-    const stage = getEscaleraStage(reto);
-    stepLabel = stage.label + ' (' + stage.range + ') · ' + mult.toFixed(2) + 'x actual';
-  }
-  else if (reto.mode === 'p501') stepLabel = 'Intento ' + (step+1) + '/2';
-  else if (reto.mode === 'p503') stepLabel = 'Intento ' + (step+1) + '/3';
-  document.getElementById('rp-step').textContent = stepLabel;
   const t = data.tipsters.find(x => x.id === reto.tipsterId);
   const liveWr = t ? calcStats(statsBets(t.bets), 'played').wr : null;
   const liveCm = t ? (avgCuota(t.bets) !== null ? avgCuota(t.bets) : (t.cuotaMediaSugerida || null)) : null;
@@ -3046,7 +3081,8 @@ function computeBalanceSeries(view) {
   const events = Object.keys(betsByDate).map(d => ({ fecha:d, delta:betsByDate[d], marker:null }));
   if (wantPlayed) {
     data.balanceMovs.forEach(m => {
-      events.push({ fecha:m.fecha, delta: m.tipo==='ingreso' ? m.monto : -m.monto, marker: { kind:m.tipo, monto:m.monto } });
+      const delta = m.tipo==='ingreso' ? m.monto : m.tipo==='retiro' ? -m.monto : m.monto; // ajuste: monto ya viene con su signo
+      events.push({ fecha:m.fecha, delta, marker: { kind:m.tipo, monto:m.monto } });
     });
   }
   events.sort((a,b) => a.fecha.localeCompare(b.fecha)); // sort estable: mantiene el orden de inserción entre iguales
@@ -3103,15 +3139,20 @@ function updateBalanceInicial(val) {
 }
 function setMovTipo(t) {
   movTipoSel = t;
-  const ib = document.getElementById('movTipo-ingreso'), rb = document.getElementById('movTipo-retiro');
+  const ib = document.getElementById('movTipo-ingreso'), rb = document.getElementById('movTipo-retiro'), ab = document.getElementById('movTipo-ajuste');
   if (ib) ib.className = 'jt-btn' + (t==='ingreso' ? ' played' : '');
   if (rb) rb.className = 'jt-btn' + (t==='retiro' ? ' retiro-sel' : '');
+  if (ab) ab.className = 'jt-btn' + (t==='ajuste' ? ' ajuste-sel' : '');
+  const hint = document.getElementById('movAjusteHint'); if (hint) hint.style.display = t==='ajuste' ? 'block' : 'none';
+  const montoInput = document.getElementById('movMonto'); if (montoInput) montoInput.placeholder = t==='ajuste' ? '+/- 0' : '0';
 }
 function addBalanceMov() {
   ensureBalanceData();
   const montoEl = document.getElementById('movMonto');
-  const monto = parseFloat(montoEl.value);
-  if (!monto || monto <= 0) { showToast('❌ Ingresá un monto válido', false); return; }
+  const rawMonto = parseFloat(montoEl.value);
+  if (!rawMonto || (movTipoSel !== 'ajuste' && rawMonto <= 0)) { showToast('❌ Ingresá un monto válido', false); return; }
+  // Ingreso/Retiro siempre se guardan como valor positivo (el signo lo pone el tipo); Ajuste guarda el signo tal cual lo escribiste.
+  const monto = movTipoSel === 'ajuste' ? rawMonto : Math.abs(rawMonto);
   const fecha = document.getElementById('movFecha').value || new Date().toISOString().split('T')[0];
   const nota = document.getElementById('movNota').value.trim();
   data.balanceMovs.push({ id: Date.now(), tipo: movTipoSel, monto, fecha, nota });
@@ -3119,7 +3160,7 @@ function addBalanceMov() {
   document.getElementById('movNota').value = '';
   save();
   renderBalanceTab();
-  showToast(movTipoSel==='ingreso' ? '✅ Ingreso agregado' : '✅ Retiro agregado');
+  showToast(movTipoSel==='ingreso' ? '✅ Ingreso agregado' : movTipoSel==='retiro' ? '✅ Retiro agregado' : '✅ Ajuste agregado');
 }
 function deleteBalanceMov(id) {
   ensureBalanceData();
@@ -3131,14 +3172,18 @@ function renderBalanceMovsHistory() {
   const el = document.getElementById('balanceMovsHistory'); if (!el) return;
   ensureBalanceData();
   const movs = [...data.balanceMovs].sort((a,b) => (b.fecha||'').localeCompare(a.fecha||'') || (b.id-a.id));
-  if (!movs.length) { el.innerHTML = '<div class="no-bets">Todavía no registraste ingresos ni retiros.</div>'; return; }
+  if (!movs.length) { el.innerHTML = '<div class="no-bets">Todavía no registraste ingresos, retiros ni ajustes.</div>'; return; }
+  const labelOf = m => m.tipo==='ingreso' ? '💵 Ingreso' : m.tipo==='retiro' ? '🏧 Retiro' : '🔧 Ajuste';
+  const badgeOf = m => m.tipo==='ingreso' ? 'badge-win' : m.tipo==='retiro' ? 'badge-loss' : 'badge-void';
+  const colorOf = m => m.tipo==='ajuste' ? (m.monto>=0?'green':'red') : (m.tipo==='ingreso'?'green':'red');
+  const signOf = m => m.tipo==='ajuste' ? (m.monto>=0?'+':'') : (m.tipo==='ingreso'?'+':'-');
   el.innerHTML = `<div style="overflow-x:auto;"><table class="bets-table"><thead><tr>
     <th>Fecha</th><th>Tipo</th><th>Monto</th><th>Nota</th><th></th>
   </tr></thead><tbody>${movs.map(m => `
     <tr>
       <td>${m.fecha||'—'}</td>
-      <td><span class="badge ${m.tipo==='ingreso'?'badge-win':'badge-loss'}">${m.tipo==='ingreso'?'💵 Ingreso':'🏧 Retiro'}</span></td>
-      <td class="${m.tipo==='ingreso'?'green':'red'}" style="font-family:'DM Mono',monospace;">${m.tipo==='ingreso'?'+':'-'}$${m.monto.toFixed(2)}</td>
+      <td><span class="badge ${badgeOf(m)}">${labelOf(m)}</span></td>
+      <td class="${colorOf(m)}" style="font-family:'DM Mono',monospace;">${signOf(m)}$${Math.abs(m.monto).toFixed(2)}</td>
       <td>${m.nota||'—'}</td>
       <td><button class="btn-del" onclick="deleteBalanceMov(${m.id})">🗑</button></td>
     </tr>`).join('')}</tbody></table></div>`;
@@ -3159,7 +3204,7 @@ function ensureBalancePlugin() {
         const pt = meta.data[i];
         if (!pt) return;
         ctx.save();
-        ctx.strokeStyle = m.kind === 'ingreso' ? '#22c55e' : '#ef4444';
+        ctx.strokeStyle = m.kind === 'ingreso' ? '#22c55e' : m.kind === 'retiro' ? '#ef4444' : '#f59e0b';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.moveTo(pt.x, chartArea.top);
@@ -3215,16 +3260,16 @@ function renderBalanceChart() {
   const c = document.getElementById('chartBalance')?.getContext('2d');
   const color = balView==='jugadas' ? '#6c63ff' : '#e879f9';
   const pointColors = values.map((v,i) => {
-    if (markers[i]) return markers[i].kind === 'ingreso' ? '#22c55e' : '#ef4444';
+    if (markers[i]) return markers[i].kind === 'ingreso' ? '#22c55e' : markers[i].kind === 'retiro' ? '#ef4444' : '#f59e0b';
     return i===0 ? color : (v>=values[i-1] ? '#22c55e' : '#ef4444');
   });
-  const pointRadii = values.map((v,i) => markers[i] ? 6 : (values.length>60 ? 0 : 4));
+  const pointRadii = values.map(() => (values.length>60 ? 0 : 4));
   if (c) charts.cBalance = new Chart(c, { type:'line', data:{ labels, datasets:[{
     label: balView==='jugadas' ? 'Balance Jugadas ($)' : 'Balance No Jugadas ($)', data: values, borderColor:color, backgroundColor: balView==='jugadas' ? 'rgba(108,99,255,.12)' : 'rgba(232,121,249,.12)',
-    fill:true, tension:0.4, pointRadius: pointRadii, pointHoverRadius: values.map((v,i)=>markers[i]?8:6),
+    fill:true, tension:0.4, pointRadius: pointRadii, pointHoverRadius: 6,
     pointBackgroundColor: pointColors,
-    pointBorderColor: values.map((v,i)=> markers[i] ? '#fff' : 'transparent'),
-    pointBorderWidth: values.map((v,i)=> markers[i] ? 2 : 0)
+    pointBorderColor: 'transparent',
+    pointBorderWidth: 0
   }] }, options: {
     ...cOpts('$'),
     plugins: {
@@ -3237,7 +3282,11 @@ function renderBalanceChart() {
           label: (ctx) => {
             const lines = ['Balance actual: $' + ctx.parsed.y.toFixed(2)];
             const m = markers[ctx.dataIndex];
-            if (m) lines.push((m.kind==='ingreso' ? '💵 Depósito: +$' : '🏧 Retiro: -$') + m.monto.toFixed(2));
+            if (m) {
+              if (m.kind==='ingreso') lines.push('💵 Depósito: +$' + m.monto.toFixed(2));
+              else if (m.kind==='retiro') lines.push('🏧 Retiro: -$' + m.monto.toFixed(2));
+              else lines.push('🔧 Ajuste: ' + (m.monto>=0?'+':'') + '$' + m.monto.toFixed(2));
+            }
             return lines;
           }
         }
@@ -3271,9 +3320,10 @@ function renderBalanceTab() {
   const isJug = view === 'jugadas';
 
   // toggle visibility de cajas que solo aplican a plata real (jugadas)
-  const tib = document.getElementById('bal-totaling-box'), trb = document.getElementById('bal-totalret-box');
+  const tib = document.getElementById('bal-totaling-box'), trb = document.getElementById('bal-totalret-box'), tab = document.getElementById('bal-totalajuste-box');
   if (tib) tib.style.display = isJug ? 'block' : 'none';
   if (trb) trb.style.display = isJug ? 'block' : 'none';
+  if (tab) tab.style.display = isJug ? 'block' : 'none';
   const histCard = document.getElementById('bal-hist-card');
   if (histCard) histCard.style.display = isJug ? 'block' : 'none';
 
@@ -3291,13 +3341,14 @@ function renderBalanceTab() {
   const t5 = document.getElementById('bal-profit-lbl'); if (t5) t5.textContent = 'Profit Total '+suf;
   const desc = document.getElementById('bal-desc');
   if (desc) desc.textContent = isJug
-    ? 'El balance parte de un balance inicial editable (podés dejarlo en 0 y cargar todo por historial), suma los ingresos, resta los retiros, y suma el profit acumulado de todas las apuestas jugadas. Cada apuesta ganada lo sube, cada perdida lo baja.'
-    : 'Balance hipotético de las apuestas que registraste pero NO jugaste (solo seguimiento). No incluye ingresos ni retiros, porque no es dinero real.';
+    ? 'El balance parte de un balance inicial editable (podés dejarlo en 0 y cargar todo por historial), suma los ingresos, resta los retiros, suma/resta los ajustes, y suma el profit acumulado de todas las apuestas jugadas. Cada apuesta ganada lo sube, cada perdida lo baja.'
+    : 'Balance hipotético de las apuestas que registraste pero NO jugaste (solo seguimiento). No incluye ingresos, retiros ni ajustes, porque no es dinero real.';
 
   const inicial = data.balanceAdj.inicial || 0;
   const totalIng = data.balanceMovs.filter(m => m.tipo==='ingreso').reduce((s,m) => s+m.monto, 0);
   const totalRet = data.balanceMovs.filter(m => m.tipo==='retiro').reduce((s,m) => s+m.monto, 0);
-  const adj = isJug ? (totalIng - totalRet) : 0;
+  const totalAjuste = data.balanceMovs.filter(m => m.tipo==='ajuste').reduce((s,m) => s+m.monto, 0);
+  const adj = isJug ? (totalIng - totalRet + totalAjuste) : 0;
   const key = isJug ? 'played' : 'skipped';
   let profitTotal = 0;
   const perTipster = data.tipsters.map(t => ({ name:t.name, profit: calcStats(t.bets,key).profit }));
@@ -3309,6 +3360,7 @@ function renderBalanceTab() {
   se('bal-actual', fmt(balanceActual), balanceActual>=0?'green':'red');
   se('bal-totaling', '$'+totalIng.toFixed(2), 'green');
   se('bal-totalret', '$'+totalRet.toFixed(2), 'red');
+  se('bal-totalajuste', (totalAjuste>=0?'+':'')+'$'+totalAjuste.toFixed(2), totalAjuste>=0?'green':'red');
   se('bal-profit', fmt(profitTotal), profitTotal>=0?'green':'red');
   se('bal-retorno', retorno!=null ? (retorno>=0?'+':'')+retorno.toFixed(2)+'%' : '—', retorno!=null?(retorno>=0?'green':'red'):'');
   if (perTipster.length) {
@@ -3634,6 +3686,11 @@ function renderCharts(){
   se('cs-yield',yield_.toFixed(1)+'%',yield_>=0?'cyan':'red');
   se('cs-wr',wr.toFixed(0)+'%','gold');
   se('cs-stake',avgSt.toFixed(1)+'u');
+  const wonB=closed.filter(b=>b.result==='win'&&b.cuota), lostB=closed.filter(b=>b.result==='loss'&&b.cuota);
+  const cuotaWinAvg=wonB.length?wonB.reduce((s,b)=>s+b.cuota,0)/wonB.length:null;
+  const cuotaLossAvg=lostB.length?lostB.reduce((s,b)=>s+b.cuota,0)/lostB.length:null;
+  se('cs-cuotawin', cuotaWinAvg!=null?cuotaWinAvg.toFixed(2):'—');
+  se('cs-cuotaloss', cuotaLossAvg!=null?cuotaLossAvg.toFixed(2):'—');
 
   destroyChart('cProfit');
   const sc=closed.filter(b=>b.fecha).sort((a,b)=>a.fecha.localeCompare(b.fecha));
@@ -3651,7 +3708,11 @@ function renderCharts(){
 
   destroyChart('cTypes');
   const typeMap={};
-  closed.forEach(b=>(b.types||['Sin tipo']).forEach(tp=>{if(!typeMap[tp])typeMap[tp]=0;typeMap[tp]+=calcProfit(b);}));
+  closed.forEach(b=>{
+    const key = (b.types && b.types.length) ? [...b.types].sort().join(' + ') : 'Sin tipo';
+    if(!typeMap[key]) typeMap[key]=0;
+    typeMap[key]+=calcProfit(b);
+  });
   const tl=Object.keys(typeMap),tv=tl.map(l=>parseFloat(typeMap[l].toFixed(2)));
   const c3=document.getElementById('chartTypes')?.getContext('2d');
   if(c3) charts.cTypes=new Chart(c3,{type:'bar',data:{labels:tl,datasets:[{label:'Profit',data:tv,backgroundColor:tv.map(v=>v>=0?'rgba(34,197,94,.6)':'rgba(239,68,68,.6)'),borderColor:tv.map(v=>v>=0?'#22c55e':'#ef4444'),borderWidth:1}]},options:cOpts('$')});
@@ -3738,6 +3799,23 @@ function renderCharts(){
   });
   const c8=document.getElementById('chartCuotaWL')?.getContext('2d');
   if(c8) charts.cCuotaWL=new Chart(c8,{type:'bar',data:{labels:cwL,datasets:[{label:'✅ Cuota media ganadas',data:cwWin,backgroundColor:'rgba(34,197,94,.6)',borderColor:'#22c55e',borderWidth:1},{label:'❌ Cuota media perdidas',data:cwLoss,backgroundColor:'rgba(239,68,68,.55)',borderColor:'#ef4444',borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#e2e8f0',font:{family:'DM Sans'}}}},scales:{x:{ticks:{color:'#6b7694'},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#6b7694'},grid:{color:'rgba(255,255,255,.04)'}}}}});
+
+  destroyChart('cCuotaRango');
+  const BUCKET=0.05;
+  const rangoMap={};
+  closed.filter(b=>b.cuota && b.cuota>1 && (b.result==='win'||b.result==='loss')).forEach(b=>{
+    const bucket = Math.floor((b.cuota-1)/BUCKET)*BUCKET+1;
+    const key = bucket.toFixed(2);
+    if(!rangoMap[key]) rangoMap[key]={count:0,wins:0,from:bucket,to:bucket+BUCKET};
+    rangoMap[key].count++;
+    if(b.result==='win') rangoMap[key].wins++;
+  });
+  const rangoTop = Object.values(rangoMap).sort((a,b)=>b.count-a.count).slice(0,10).sort((a,b)=>a.from-b.from);
+  const rgLabels = rangoTop.map(r=>r.from.toFixed(2)+'–'+r.to.toFixed(2));
+  const rgWR = rangoTop.map(r=>parseFloat((r.wins/r.count*100).toFixed(1)));
+  const rgCount = rangoTop.map(r=>r.count);
+  const c9=document.getElementById('chartCuotaRango')?.getContext('2d');
+  if(c9) charts.cCuotaRango=new Chart(c9,{type:'bar',data:{labels:rgLabels,datasets:[{label:'Win Rate (%)',data:rgWR,backgroundColor:rgWR.map(v=>v>=50?'rgba(34,197,94,.6)':'rgba(239,68,68,.55)'),borderColor:rgWR.map(v=>v>=50?'#22c55e':'#ef4444'),borderWidth:1,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.parsed.y+'% de efectividad',afterLabel:ctx=>rgCount[ctx.dataIndex]+' apuestas jugadas en este rango'}}},scales:{x:{ticks:{color:'#6b7694',maxTicksLimit:10},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#6b7694',callback:v=>v+'%'},grid:{color:'rgba(255,255,255,.04)'},max:100}}}});
 }
 
 // ============================================================
@@ -3751,7 +3829,7 @@ function exportData(){
 function importData(ev){
   const f=ev.target.files[0];if(!f)return;
   const r=new FileReader();
-  r.onload=e=>{try{data=JSON.parse(e.target.result); if(!data.retos) data.retos=[]; ensureBalanceData(); ensureGlobalStakeDefault(); data.tipsters.forEach(t=>{refreshBankPico(t);maybeRefreshBankPctSnapshot(t);}); save();renderAll();showToast('✅ Datos importados');}catch{showToast('❌ Archivo inválido',false);}};
+  r.onload=e=>{try{data=JSON.parse(e.target.result); if(!data.retos) data.retos=[]; ensureBalanceData(); ensureGlobalStakeDefault(); migrateOldTypeLabels(); data.tipsters.forEach(t=>{refreshBankPico(t);maybeRefreshBankPctSnapshot(t);}); save();renderAll();showToast('✅ Datos importados');}catch{showToast('❌ Archivo inválido',false);}};
   r.readAsText(f);ev.target.value='';
 }
 
