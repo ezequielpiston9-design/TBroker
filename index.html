@@ -1944,7 +1944,8 @@ function toggleAutoCuota() {
     const t = getSelectedTipster();
     if (t && t.autoCuota !== false) {
       const ac = avgCuota(t.bets);
-      if (ac !== null) document.getElementById('bCuota').value = ac.toFixed(2);
+      const acFinal = ac !== null ? ac : (t.cuotaMediaSugerida || null);
+      if (acFinal !== null) document.getElementById('bCuota').value = acFinal.toFixed(2);
     }
   }
   updateExceptionRow();
