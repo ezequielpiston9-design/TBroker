@@ -707,7 +707,7 @@ select option{background:var(--s2);}
     <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:9px;font-size:0.62rem;color:var(--muted2);">
       <span>🟢 <span style="color:var(--green);">┊</span> Depósito</span>
       <span>🔴 <span style="color:var(--red);">┊</span> Retiro</span>
-      <span>🟠 <span style="color:var(--gold);">┊</span> Ajuste</span>
+      <span>🔧 Ajuste: sin línea, tocá el punto para verlo</span>
     </div>
   </div>
   <div class="card" style="margin-bottom:11px;">
@@ -1209,13 +1209,13 @@ function renderStakeQuickBtns(t) {
   const el = document.getElementById('stakeQuickBtns'); if (!el) return;
   if (!t) { el.innerHTML = ''; return; }
 
-  // Los 3 botones rápidos siempre reflejan los stakes MÁS USADOS realmente (historial de apuestas),
+  // Los botones rápidos siempre reflejan los stakes MÁS USADOS realmente (historial de apuestas),
   // filtrados por si estás cargando una Jugada o una No Jugada. No dependen del modo de cálculo de
   // monto (avg/tabla/%bank/off) — esa tabla manual es solo para el cálculo automático del monto,
-  // esto es solo una ayuda para completar rápido.
+  // esto es solo una ayuda para completar rápido. Muestra hasta 6 si hay esa cantidad de stakes distintos.
   const wantJugada = curJugada === null ? true : curJugada;
-  let stakes = topStakes(t.bets.filter(b => b.played === wantJugada), 3);
-  if (!stakes.length) stakes = topStakes(t.bets, 3); // fallback si todavía no hay historial para esa categoría
+  let stakes = topStakes(t.bets.filter(b => b.played === wantJugada), 6);
+  if (!stakes.length) stakes = topStakes(t.bets, 6); // fallback si todavía no hay historial para esa categoría
   if (!stakes.length) { el.innerHTML = ''; return; }
 
   const curStake = parseFloat(document.getElementById('bStake').value);
@@ -1282,8 +1282,9 @@ function renderTypeTable(bets, containerId, metric='profit') {
     </tr>`).join('')}</tbody></table>`;
 }
 
-function avgCuota(bets) {
-  const b = bets.filter(x => x.cuota && x.cuota > 1 && x.result !== 'pending');
+function avgCuota(bets, jugada=null) {
+  let b = bets.filter(x => x.cuota && x.cuota > 1 && x.result !== 'pending');
+  if (jugada !== null) b = b.filter(x => x.played === jugada);
   if (!b.length) return null;
   return b.reduce((s,x) => s + x.cuota, 0) / b.length;
 }
@@ -1572,7 +1573,7 @@ function renderTipsterBody(t, s, sk, ratio, roi, color) {
       <div class="pbox"><div class="pbox-lbl">Yield</div><div class="pbox-val ${s.yield_>=0?'cyan':'red'}">${s.yield_.toFixed(2)}%</div></div>
       ${roi!==null?`<div class="pbox"><div class="pbox-lbl">ROI (bankroll)</div><div class="pbox-val ${roi>=0?'purple':'red'}">${roi.toFixed(2)}%</div></div>`:''}
       <div class="pbox"><div class="pbox-lbl">Win Rate</div><div class="pbox-val gold">${s.wr.toFixed(1)}%</div></div>
-      ${(()=>{const ac=avgCuota(t.bets.filter(b=>b.played));return ac!==null?`<div class="pbox"><div class="pbox-lbl">Cuota Media</div><div class="pbox-val gold">${ac.toFixed(2)}</div></div>`:''})()}
+      ${(()=>{const ac=avgCuota(statsBets(t.bets),true);return ac!==null?`<div class="pbox"><div class="pbox-lbl">Cuota Media</div><div class="pbox-val gold">${ac.toFixed(2)}</div></div>`:''})()}
       <div class="pbox"><div class="pbox-lbl">U. Netas</div><div class="pbox-val ${s.uNet>=0?'green':'red'}">${fmtU(s.uNet)}</div></div>
       <div class="pbox"><div class="pbox-lbl">Yield (U)</div><div class="pbox-val ${s.uYield>=0?'cyan':'red'}">${s.uYield.toFixed(2)}%</div></div>
       ${ratio!==null?`<div class="pbox"><div class="pbox-lbl">$ / stake</div><div class="pbox-val purple">≈$${ratio.toFixed(0)}</div></div>`:''}
@@ -1585,7 +1586,7 @@ function renderTipsterBody(t, s, sk, ratio, roi, color) {
       <div class="pbox"><div class="pbox-lbl">Profit $</div><div class="pbox-val ${sk.profit>=0?'pink':'red'}">${fmt(sk.profit)}</div></div>
       <div class="pbox"><div class="pbox-lbl">Yield</div><div class="pbox-val ${sk.yield_>=0?'pink':'red'}">${sk.yield_.toFixed(2)}%</div></div>
       <div class="pbox"><div class="pbox-lbl">Win Rate</div><div class="pbox-val gold">${sk.wr.toFixed(1)}%</div></div>
-      ${(()=>{const ac=avgCuota(t.bets.filter(b=>!b.played));return ac!==null?`<div class="pbox"><div class="pbox-lbl">Cuota Media</div><div class="pbox-val gold">${ac.toFixed(2)}</div></div>`:''})()}
+      ${(()=>{const ac=avgCuota(statsBets(t.bets),false);return ac!==null?`<div class="pbox"><div class="pbox-lbl">Cuota Media</div><div class="pbox-val gold">${ac.toFixed(2)}</div></div>`:''})()}
       <div class="pbox"><div class="pbox-lbl">U. Netas</div><div class="pbox-val ${sk.uNet>=0?'pink':'red'}">${fmtU(sk.uNet)}</div></div>
       <div class="pbox"><div class="pbox-lbl">Yield (U)</div><div class="pbox-val ${sk.uYield>=0?'pink':'red'}">${sk.uYield.toFixed(2)}%</div></div>
     </div>
@@ -1849,7 +1850,9 @@ function prefillFromTipster(t) {
     if (monto != null) document.getElementById('bMonto').value = monto.toFixed(2);
   }
   if (!betCuotaException && t.autoCuota !== false) {
-    const ac = avgCuota(t.bets);
+    const wantJugada = curJugada === null ? true : curJugada;
+    let ac = avgCuota(statsBets(t.bets), wantJugada);
+    if (ac === null) ac = avgCuota(statsBets(t.bets)); // fallback: si no hay historial para esa categoría puntual, usa el general
     const acFinal = ac !== null ? ac : (t.cuotaMediaSugerida || null);
     if (acFinal !== null) document.getElementById('bCuota').value = acFinal.toFixed(2);
   }
@@ -1897,10 +1900,12 @@ function onTipsterChange() {
   const t = getSelectedTipster();
   if (t) maybeRefreshBankPctSnapshot(t);
   // Auto-selecciona Jugada / No Jugada según la tendencia histórica del tipster.
+  // Excluye apuestas de Reto (siempre quedan "jugada" a la fuerza, no reflejan tu preferencia real).
   // Si hay empate (o todavía no tiene apuestas), se deja sin seleccionar.
   if (t) {
-    const playedCount = t.bets.filter(b => b.played).length;
-    const skippedCount = t.bets.filter(b => !b.played).length;
+    const relevantBets = statsBets(t.bets);
+    const playedCount = relevantBets.filter(b => b.played).length;
+    const skippedCount = relevantBets.filter(b => !b.played).length;
     if (playedCount > skippedCount) setJugada(true);
     else if (skippedCount > playedCount) setJugada(false);
   }
@@ -1943,7 +1948,9 @@ function toggleAutoCuota() {
     badge.textContent = '📐 Auto';
     const t = getSelectedTipster();
     if (t && t.autoCuota !== false) {
-      const ac = avgCuota(t.bets);
+      const wantJugada = curJugada === null ? true : curJugada;
+      let ac = avgCuota(statsBets(t.bets), wantJugada);
+      if (ac === null) ac = avgCuota(statsBets(t.bets));
       const acFinal = ac !== null ? ac : (t.cuotaMediaSugerida || null);
       if (acFinal !== null) document.getElementById('bCuota').value = acFinal.toFixed(2);
     }
@@ -2707,6 +2714,7 @@ function setJugada(v) {
   document.getElementById('jt-played').className='jt-btn'+(v===true?' played':'');
   document.getElementById('jt-skipped').className='jt-btn'+(v===false?' skipped':'');
   recalcMontoForJugadaContext();
+  recalcCuotaForJugadaContext();
   updateBankBlockWarning();
   renderStakeQuickBtns(getSelectedTipster());
   updateGlobalExpoPanel();
@@ -2724,6 +2732,19 @@ function updateBankBlockWarning() {
     el.style.display = 'block';
   } else {
     el.style.display = 'none';
+  }
+}
+function recalcCuotaForJugadaContext() {
+  if (betCuotaException) return; // modo manual, el usuario lo controla
+  const t = getSelectedTipster();
+  if (!t || t.autoCuota === false) return;
+  const wantJugada = curJugada === null ? true : curJugada;
+  let ac = avgCuota(statsBets(t.bets), wantJugada);
+  if (ac === null) ac = avgCuota(statsBets(t.bets));
+  const acFinal = ac !== null ? ac : (t.cuotaMediaSugerida || null);
+  if (acFinal !== null) {
+    document.getElementById('bCuota').value = acFinal.toFixed(2);
+    updatePreview();
   }
 }
 function recalcMontoForJugadaContext() {
@@ -3206,11 +3227,11 @@ function ensureBalancePlugin() {
       const { ctx, chartArea } = chart;
       if (!chartArea || !meta) return;
       markers.forEach((m, i) => {
-        if (!m) return;
+        if (!m || m.kind === 'ajuste') return;
         const pt = meta.data[i];
         if (!pt) return;
         ctx.save();
-        ctx.strokeStyle = m.kind === 'ingreso' ? '#22c55e' : m.kind === 'retiro' ? '#ef4444' : '#f59e0b';
+        ctx.strokeStyle = m.kind === 'ingreso' ? '#22c55e' : '#ef4444';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.moveTo(pt.x, chartArea.top);
@@ -3266,7 +3287,7 @@ function renderBalanceChart() {
   const c = document.getElementById('chartBalance')?.getContext('2d');
   const color = balView==='jugadas' ? '#6c63ff' : '#e879f9';
   const pointColors = values.map((v,i) => {
-    if (markers[i]) return markers[i].kind === 'ingreso' ? '#22c55e' : markers[i].kind === 'retiro' ? '#ef4444' : '#f59e0b';
+    if (markers[i] && markers[i].kind !== 'ajuste') return markers[i].kind === 'ingreso' ? '#22c55e' : '#ef4444';
     return i===0 ? color : (v>=values[i-1] ? '#22c55e' : '#ef4444');
   });
   const pointRadii = values.map(() => (values.length>60 ? 0 : 4));
