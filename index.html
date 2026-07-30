@@ -103,6 +103,7 @@ select option{background:var(--s2);}
 /* TIPSTER CARDS */
 .tipster-list{display:flex;flex-direction:column;gap:8px;}
 .tipster-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:border-color .2s;}
+.tipster-card.archived-card{opacity:.65;}
 .tipster-card:hover{border-color:rgba(108,99,255,.4);}
 .tipster-header{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;cursor:pointer;background:var(--s2);flex-wrap:wrap;gap:7px;}
 .tipster-left{display:flex;align-items:center;gap:9px;}
@@ -255,6 +256,7 @@ select option{background:var(--s2);}
   <button class="tab" onclick="switchTab('graficas')">📊 Gráficas</button>
   <button class="tab" onclick="switchTab('balance')">💰 Balance</button>
   <button class="tab" onclick="switchTab('apuestas')">📋 Apuestas</button>
+  <button class="tab" onclick="switchTab('notas')">📝 Notas</button>
 </div>
 
 <!-- ===== TAB TIPSTERS ===== -->
@@ -556,6 +558,7 @@ select option{background:var(--s2);}
           <button class="flt-btn a-all" id="flt-all" onclick="setChartFilter('all')">🔵 Todas</button>
           <button class="flt-btn" id="flt-played" onclick="setChartFilter('played')">✅ Jugadas</button>
           <button class="flt-btn" id="flt-skipped" onclick="setChartFilter('skipped')">👁 No Jugadas</button>
+          <button class="flt-btn a-all" id="flt-noarch" onclick="toggleExcludeArchived()">📦 No Archivados</button>
         </div>
       </div>
       <div><span class="flbl">Tipsters:</span>
@@ -767,6 +770,23 @@ select option{background:var(--s2);}
   <div class="card"><div class="card-title">Todas las Apuestas (más nuevas primero)</div><div id="apuestasTable"></div></div>
 </div>
 
+<!-- ===== TAB NOTAS ===== -->
+<div id="tab-notas" class="tab-content">
+  <div class="card" style="margin-bottom:11px;">
+    <div class="card-title">📝 Nueva Nota</div>
+    <div class="form-grid" style="margin-bottom:9px;">
+      <div class="fg"><label>Título <span class="opt">(opcional)</span></label><input type="text" id="notaTitulo" placeholder="Ej: Estrategia para Champions"></div>
+      <div class="fg"><label>Fecha</label><input type="date" id="notaFecha"></div>
+    </div>
+    <div class="fg" style="margin-bottom:9px;">
+      <label>Contenido</label>
+      <textarea id="notaContenido" rows="4" placeholder="Escribí lo que quieras recordar..." style="width:100%;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:8px 11px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:0.8rem;outline:none;resize:vertical;"></textarea>
+    </div>
+    <button class="btn btn-primary" onclick="addNota()">➕ Guardar Nota</button>
+  </div>
+  <div class="card"><div class="card-title">Notas Guardadas (más nuevas primero)</div><div id="notasList"></div></div>
+</div>
+
 
 </div><!-- /container -->
 
@@ -928,8 +948,12 @@ select option{background:var(--s2);}
         <span style="font-size:0.62rem;color:var(--muted);">Al seleccionar el tipster, la cuota se pre-rellena con su cuota media histórica. Desactivable por apuesta.</span>
       </div>
       <div class="fg" style="margin-top:9px;">
-        <label>Cuota media sugerida <span class="opt">(manual, opcional — se usa si todavía no hay historial)</span></label>
+        <label>Cuota media sugerida <span class="opt">(manual, opcional)</span></label>
         <input type="number" id="etCuotaSugerida" step="0.01" placeholder="ej: 1.85">
+      </div>
+      <div style="margin-top:8px;">
+        <button class="auto-badge" id="etForceCuotaSugerida" onclick="toggleETForceCuotaSugerida()">🔒 Usar siempre el promedio histórico</button>
+        <div style="font-size:0.6rem;color:var(--muted);margin-top:4px;">Por defecto usa el promedio histórico si hay apuestas cargadas, y recién si no hay historial cae a la cuota sugerida. Activá esto para que SIEMPRE use la cuota sugerida manual, ignorando el promedio.</div>
       </div>
     </div>
 
@@ -1016,6 +1040,7 @@ let autoStakeOn = true;
 let betException = false;
 let betCuotaException = false;
 let chartFilter = 'all', chartTipsters = [], chartPeriod = 'all', chartDateFrom = null, chartDateTo = null;
+let chartExcludeArchived = true;
 let chartTypesFilter = [];
 let unitFilter = 'all', unitTipster = 'all', unitPeriod = 'all', unitDateFrom = null, unitDateTo = null;
 let unitSports = [];
@@ -1051,6 +1076,7 @@ function initApp() {
   ensureBalanceData();
   ensureGlobalStakeDefault();
   migrateOldTypeLabels();
+  ensureNotas();
   data.tipsters.forEach(t => { refreshBankPico(t); maybeRefreshBankPctSnapshot(t); });
   renderAll();
   setSyncStatus('connecting');
@@ -1069,6 +1095,7 @@ function startFB() {
       ensureBalanceData();
       ensureGlobalStakeDefault();
       migrateOldTypeLabels();
+      ensureNotas();
       localStorage.setItem('tipsterbook_v4', JSON.stringify(data));
       renderAll();
     }
@@ -1427,12 +1454,13 @@ function switchTab(id) {
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.tab:not(.subtab)').forEach(t=>t.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
-  ['tipsters','nueva','unidades','graficas','balance','apuestas'].forEach((x,i)=>{ if(x===id) document.querySelectorAll('.tab:not(.subtab)')[i]?.classList.add('active'); });
+  ['tipsters','nueva','unidades','graficas','balance','apuestas','notas'].forEach((x,i)=>{ if(x===id) document.querySelectorAll('.tab:not(.subtab)')[i]?.classList.add('active'); });
   if (id==='graficas') { updateChartTipsterFilter(); setGraficasSubView(graficasSubView); }
   if (id==='unidades') { updateUnitTipsterFilter(); renderUnidades(); }
   if (id==='nueva') { renderRetoInfoPanel(); updateRiskPanel(); updateGlobalExpoPanel(); }
   if (id==='balance') { renderBalanceTab(); }
   if (id==='apuestas') { updateApuestasTipsterFilter(); renderApuestasList(); }
+  if (id==='notas') { renderNotas(); }
 }
 
 // ============================================================
@@ -1452,6 +1480,18 @@ function deleteTipster(id) {
     data.tipsters = data.tipsters.filter(t=>t.id!==id);
     save(); renderAll(); showToast('🗑 Tipster eliminado');
   });
+}
+function archiveTipster(id) {
+  const t = data.tipsters.find(x=>x.id===id); if (!t) return;
+  showConfirm('¿Archivar este tipster? No vas a poder registrarle apuestas nuevas ni va a aparecer en Gráficas hasta que lo desarchives. Sus apuestas y balance quedan guardados tal cual.', () => {
+    t.archivado = true;
+    save(); renderAll(); showToast('📦 Tipster archivado');
+  });
+}
+function unarchiveTipster(id) {
+  const t = data.tipsters.find(x=>x.id===id); if (!t) return;
+  t.archivado = false;
+  save(); renderAll(); showToast('📤 Tipster desarchivado');
 }
 function setTipsterSort(key, el) {
   tipsterSort = key;
@@ -1478,7 +1518,9 @@ function renderTipsterList() {
   const el = document.getElementById('tipsterList');
   const sorted = getSortedTipsters();
   if (!sorted.length) { el.innerHTML='<div class="empty"><div class="empty-icon">⚽</div><p>Sin tipsters. Agrega el primero.</p></div>'; return; }
-  el.innerHTML = sorted.map(t => {
+  const activos = sorted.filter(t => !t.archivado);
+  const archivados = sorted.filter(t => t.archivado);
+  const renderCard = (t) => {
     const ci = data.tipsters.indexOf(t);
     const color = COLORS[ci % COLORS.length];
     const s = calcStats(statsBets(t.bets), 'played');
@@ -1486,12 +1528,12 @@ function renderTipsterList() {
     const pc = t.bets.filter(b=>b.played).length, tc = t.bets.length;
     const ratio = avgStakeRatio(t.bets);
     const roi = t.bankroll && t.bankroll > 0 ? s.profit / t.bankroll * 100 : null;
-    return `<div class="tipster-card">
+    return `<div class="tipster-card${t.archivado?' archived-card':''}">
       <div class="tipster-header" onclick="toggleTipster(${t.id})">
         <div class="tipster-left">
-          <div class="avatar" style="background:${color}">${t.name.substring(0,2).toUpperCase()}</div>
+          <div class="avatar" style="background:${color}${t.archivado?';filter:grayscale(1);opacity:.6;':''}">${t.name.substring(0,2).toUpperCase()}</div>
           <div>
-            <div class="tipster-name">${t.name}</div>
+            <div class="tipster-name">${t.name}${t.archivado?' <span class="badge badge-void" style="margin-left:5px;">📦 Archivado</span>':''}</div>
             <div style="font-size:0.58rem;color:var(--muted);margin-top:2px;">${pc}/${tc} jugadas
               <div class="winrate-bar" style="width:55px;display:inline-block;vertical-align:middle;margin-left:4px;"><div class="winrate-fill" style="width:${tc?pc/tc*100:0}%"></div></div>
             </div>
@@ -1505,13 +1547,21 @@ function renderTipsterList() {
           <div class="tip-stat"><div class="tip-stat-lbl">WR (no jug)</div><div class="tip-stat-val gold">${sk.wr.toFixed(0)}%</div></div>
           <button class="btn-edit btn-sm" onclick="event.stopPropagation();openTipsterChart(${t.id})" title="Gráfica individual">📊</button>
           <button class="btn-edit btn-sm" onclick="event.stopPropagation();openEditTipsterModal(${t.id})" title="Configurar">⚙️</button>
+          ${t.archivado
+            ? `<button class="btn-edit btn-sm" onclick="event.stopPropagation();unarchiveTipster(${t.id})" title="Desarchivar">📤</button>`
+            : `<button class="btn-edit btn-sm" onclick="event.stopPropagation();archiveTipster(${t.id})" title="Archivar">📦</button>`}
           <button class="btn-del btn-sm" onclick="event.stopPropagation();deleteTipster(${t.id})" title="Eliminar">🗑</button>
           <span class="chevron" id="chev-${t.id}">▼</span>
         </div>
       </div>
       <div class="tipster-body${openTipsterIds.has(t.id) ? ' open' : ''}" id="tbody-${t.id}">${renderTipsterBody(t,s,sk,ratio,roi,color)}</div>
     </div>`;
-  }).join('');
+  };
+  let html = activos.map(renderCard).join('');
+  if (archivados.length) {
+    html += `<div class="section-divider" style="margin-top:15px;">📦 Archivados (${archivados.length})</div>` + archivados.map(renderCard).join('');
+  }
+  el.innerHTML = html;
   // re-apply chevron state
   data.tipsters.forEach(t => {
     const chev = document.getElementById('chev-'+t.id);
@@ -1763,6 +1813,12 @@ function openEditTipsterModal(id) {
   const acOn = t.autoCuota !== false;
   if (acBtn) { acBtn.className = 'auto-badge' + (acOn ? ' on' : ''); acBtn.textContent = acOn ? '📐 Auto activado' : '✏️ Manual'; }
   document.getElementById('etCuotaSugerida').value = t.cuotaMediaSugerida != null ? t.cuotaMediaSugerida : '';
+  const fcsBtn = document.getElementById('etForceCuotaSugerida');
+  if (fcsBtn) {
+    const forceOn = t.forceCuotaSugerida === true;
+    fcsBtn.className = 'auto-badge' + (forceOn ? ' on' : '');
+    fcsBtn.textContent = forceOn ? '🔒 Usar siempre la cuota sugerida' : '🔒 Usar siempre el promedio histórico';
+  }
   ensureGlobalStakeDefault();
   const defStakeEl = document.getElementById('etDefaultStake'), defMontoEl = document.getElementById('etDefaultMonto');
   if (defStakeEl) defStakeEl.value = data.globalStakeDefault.stake;
@@ -1774,6 +1830,12 @@ function toggleETAutoCuota() {
   const on = btn.classList.contains('on');
   btn.className = 'auto-badge' + (on ? '' : ' on');
   btn.textContent = on ? '✏️ Manual' : '📐 Auto activado';
+}
+function toggleETForceCuotaSugerida() {
+  const btn = document.getElementById('etForceCuotaSugerida');
+  const on = btn.classList.contains('on');
+  btn.className = 'auto-badge' + (on ? '' : ' on');
+  btn.textContent = on ? '🔒 Usar siempre el promedio histórico' : '🔒 Usar siempre la cuota sugerida';
 }
 function closeEditTipsterModal() { document.getElementById('editTipsterModal').style.display = 'none'; }
 function toggleETAutoStake() {}
@@ -1814,6 +1876,8 @@ function saveEditTipster() {
   t.autoCuota = acBtn ? acBtn.classList.contains('on') : true;
   const cmVal = document.getElementById('etCuotaSugerida').value;
   t.cuotaMediaSugerida = cmVal !== '' ? (parseFloat(cmVal) || null) : null;
+  const fcsBtn = document.getElementById('etForceCuotaSugerida');
+  t.forceCuotaSugerida = fcsBtn ? fcsBtn.classList.contains('on') : false;
   refreshBankPico(t);
   save(); renderAll(); closeEditTipsterModal(); showToast('✅ Tipster actualizado');
 }
@@ -1850,10 +1914,15 @@ function prefillFromTipster(t) {
     if (monto != null) document.getElementById('bMonto').value = monto.toFixed(2);
   }
   if (!betCuotaException && t.autoCuota !== false) {
-    const wantJugada = curJugada === null ? true : curJugada;
-    let ac = avgCuota(statsBets(t.bets), wantJugada);
-    if (ac === null) ac = avgCuota(statsBets(t.bets)); // fallback: si no hay historial para esa categoría puntual, usa el general
-    const acFinal = ac !== null ? ac : (t.cuotaMediaSugerida || null);
+    let acFinal;
+    if (t.forceCuotaSugerida && t.cuotaMediaSugerida != null) {
+      acFinal = t.cuotaMediaSugerida;
+    } else {
+      const wantJugada = curJugada === null ? true : curJugada;
+      let ac = avgCuota(statsBets(t.bets), wantJugada);
+      if (ac === null) ac = avgCuota(statsBets(t.bets)); // fallback: si no hay historial para esa categoría puntual, usa el general
+      acFinal = ac !== null ? ac : (t.cuotaMediaSugerida || null);
+    }
     if (acFinal !== null) document.getElementById('bCuota').value = acFinal.toFixed(2);
   }
   renderStakeQuickBtns(t);
@@ -1948,10 +2017,15 @@ function toggleAutoCuota() {
     badge.textContent = '📐 Auto';
     const t = getSelectedTipster();
     if (t && t.autoCuota !== false) {
-      const wantJugada = curJugada === null ? true : curJugada;
-      let ac = avgCuota(statsBets(t.bets), wantJugada);
-      if (ac === null) ac = avgCuota(statsBets(t.bets));
-      const acFinal = ac !== null ? ac : (t.cuotaMediaSugerida || null);
+      let acFinal;
+      if (t.forceCuotaSugerida && t.cuotaMediaSugerida != null) {
+        acFinal = t.cuotaMediaSugerida;
+      } else {
+        const wantJugada = curJugada === null ? true : curJugada;
+        let ac = avgCuota(statsBets(t.bets), wantJugada);
+        if (ac === null) ac = avgCuota(statsBets(t.bets));
+        acFinal = ac !== null ? ac : (t.cuotaMediaSugerida || null);
+      }
       if (acFinal !== null) document.getElementById('bCuota').value = acFinal.toFixed(2);
     }
   }
@@ -2738,10 +2812,15 @@ function recalcCuotaForJugadaContext() {
   if (betCuotaException) return; // modo manual, el usuario lo controla
   const t = getSelectedTipster();
   if (!t || t.autoCuota === false) return;
-  const wantJugada = curJugada === null ? true : curJugada;
-  let ac = avgCuota(statsBets(t.bets), wantJugada);
-  if (ac === null) ac = avgCuota(statsBets(t.bets));
-  const acFinal = ac !== null ? ac : (t.cuotaMediaSugerida || null);
+  let acFinal;
+  if (t.forceCuotaSugerida && t.cuotaMediaSugerida != null) {
+    acFinal = t.cuotaMediaSugerida;
+  } else {
+    const wantJugada = curJugada === null ? true : curJugada;
+    let ac = avgCuota(statsBets(t.bets), wantJugada);
+    if (ac === null) ac = avgCuota(statsBets(t.bets));
+    acFinal = ac !== null ? ac : (t.cuotaMediaSugerida || null);
+  }
   if (acFinal !== null) {
     document.getElementById('bCuota').value = acFinal.toFixed(2);
     updatePreview();
@@ -3022,7 +3101,7 @@ function renderTipsterChart() {
 // ============================================================
 function updateTipsterSelect() {
   const sel=document.getElementById('bTipster'),cur=sel.value;
-  sel.innerHTML='<option value="">— Seleccionar —</option>'+data.tipsters.map(t=>`<option value="${t.id}"${t.id==cur?' selected':''}>${t.name}</option>`).join('');
+  sel.innerHTML='<option value="">— Seleccionar —</option>'+data.tipsters.filter(t=>!t.archivado).map(t=>`<option value="${t.id}"${t.id==cur?' selected':''}>${t.name}</option>`).join('');
 }
 function updateGlobalStats() {
   let inv=0,prof=0,won=0,closed=0,total=0,played=0;
@@ -3076,6 +3155,52 @@ let movTipoSel = 'ingreso';
 function getBaselineTotal() {
   return data.tipsters.reduce((s,t) => s + (t.bankroll != null ? t.bankroll : 0), 0);
 }
+// ============================================================
+// TAB NOTAS
+// ============================================================
+function ensureNotas() {
+  if (!data.notas) data.notas = [];
+}
+function addNota() {
+  ensureNotas();
+  const contenido = document.getElementById('notaContenido').value.trim();
+  if (!contenido) { showToast('❌ Escribí algo en el contenido', false); return; }
+  const titulo = document.getElementById('notaTitulo').value.trim();
+  const fecha = document.getElementById('notaFecha').value || new Date().toISOString().split('T')[0];
+  data.notas.push({ id: Date.now(), titulo, contenido, fecha });
+  document.getElementById('notaTitulo').value = '';
+  document.getElementById('notaContenido').value = '';
+  save();
+  renderNotas();
+  showToast('✅ Nota guardada');
+}
+function deleteNota(id) {
+  ensureNotas();
+  showConfirm('¿Eliminar esta nota?', () => {
+    data.notas = data.notas.filter(n => n.id !== id);
+    save();
+    renderNotas();
+  });
+}
+function renderNotas() {
+  ensureNotas();
+  if (!document.getElementById('notaFecha').value) document.getElementById('notaFecha').value = new Date().toISOString().split('T')[0];
+  const el = document.getElementById('notasList'); if (!el) return;
+  const notas = [...data.notas].sort((a,b) => (b.fecha||'').localeCompare(a.fecha||'') || (b.id-a.id));
+  if (!notas.length) { el.innerHTML = '<div class="no-bets">Todavía no guardaste ninguna nota.</div>'; return; }
+  el.innerHTML = notas.map(n => `
+    <div class="card" style="margin-bottom:9px;background:var(--s2);">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">
+        <div>
+          ${n.titulo ? `<div style="font-family:'Unbounded',sans-serif;font-size:0.74rem;font-weight:700;color:var(--accent);margin-bottom:2px;">${n.titulo}</div>` : ''}
+          <div style="font-size:0.6rem;color:var(--muted);font-family:'DM Mono',monospace;">${n.fecha||''}</div>
+        </div>
+        <button class="btn-del" onclick="deleteNota(${n.id})">🗑</button>
+      </div>
+      <div style="font-size:0.78rem;color:var(--text);white-space:pre-wrap;">${n.contenido}</div>
+    </div>
+  `).join('');
+}
 function ensureBalanceData() {
   if (!data.balanceMovs) data.balanceMovs = [];
   if (!data.balanceAdj) data.balanceAdj = {};
@@ -3098,29 +3223,32 @@ function computeBalanceSeries(view) {
   const inicial = data.balanceAdj.inicial || 0;
   const wantPlayed = view === 'jugadas';
 
-  // Las apuestas del mismo día se agrupan en un solo punto (para no saturar la gráfica),
-  // pero cada ingreso/retiro queda como SU PROPIO punto individual con marcador.
-  const betsByDate = {};
+  // Un solo punto por fecha: se agrupan las apuestas Y los movimientos (ingreso/retiro/ajuste)
+  // de ese mismo día en un único punto. El detalle de qué pasó ese día se ve en el tooltip.
+  const deltaByDate = {};
+  const movsByDate = {};
+
   data.tipsters
     .flatMap(t => t.bets.filter(b => b.played === wantPlayed && b.result !== 'pending' && b.fecha))
-    .forEach(b => { betsByDate[b.fecha] = (betsByDate[b.fecha]||0) + calcProfit(b); });
+    .forEach(b => { deltaByDate[b.fecha] = (deltaByDate[b.fecha]||0) + calcProfit(b); });
 
-  const events = Object.keys(betsByDate).map(d => ({ fecha:d, delta:betsByDate[d], marker:null }));
   if (wantPlayed) {
     data.balanceMovs.forEach(m => {
       const delta = m.tipo==='ingreso' ? m.monto : m.tipo==='retiro' ? -m.monto : m.monto; // ajuste: monto ya viene con su signo
-      events.push({ fecha:m.fecha, delta, marker: { kind:m.tipo, monto:m.monto } });
+      deltaByDate[m.fecha] = (deltaByDate[m.fecha]||0) + delta;
+      if (!movsByDate[m.fecha]) movsByDate[m.fecha] = [];
+      movsByDate[m.fecha].push({ kind: m.tipo, monto: m.monto });
     });
   }
-  events.sort((a,b) => a.fecha.localeCompare(b.fecha)); // sort estable: mantiene el orden de inserción entre iguales
 
+  const dates = Object.keys(deltaByDate).sort();
   const labels = ['Inicio'], values = [parseFloat(inicial.toFixed(2))], markers = [null];
   let running = inicial;
-  events.forEach(e => {
-    running += e.delta;
-    labels.push(e.fecha);
+  dates.forEach(d => {
+    running += deltaByDate[d];
+    labels.push(d);
     values.push(parseFloat(running.toFixed(2)));
-    markers.push(e.marker);
+    markers.push(movsByDate[d] || null); // null, o array de movimientos ese día
   });
   return { labels, values, markers, baseline: inicial };
 }
@@ -3226,12 +3354,16 @@ function ensureBalancePlugin() {
       const meta = chart.getDatasetMeta(0);
       const { ctx, chartArea } = chart;
       if (!chartArea || !meta) return;
-      markers.forEach((m, i) => {
-        if (!m || m.kind === 'ajuste') return;
+      markers.forEach((arr, i) => {
+        if (!arr || !arr.length) return;
         const pt = meta.data[i];
         if (!pt) return;
+        const relevant = arr.filter(m => m.kind !== 'ajuste');
+        if (!relevant.length) return;
+        // Si hubo ingreso y retiro el mismo día, priorizamos mostrar el retiro (color de alerta).
+        const shown = relevant.find(m => m.kind === 'retiro') || relevant[0];
         ctx.save();
-        ctx.strokeStyle = m.kind === 'ingreso' ? '#22c55e' : '#ef4444';
+        ctx.strokeStyle = shown.kind === 'ingreso' ? '#22c55e' : '#ef4444';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.moveTo(pt.x, chartArea.top);
@@ -3287,7 +3419,14 @@ function renderBalanceChart() {
   const c = document.getElementById('chartBalance')?.getContext('2d');
   const color = balView==='jugadas' ? '#6c63ff' : '#e879f9';
   const pointColors = values.map((v,i) => {
-    if (markers[i] && markers[i].kind !== 'ajuste') return markers[i].kind === 'ingreso' ? '#22c55e' : '#ef4444';
+    const arr = markers[i];
+    if (arr && arr.length) {
+      const relevant = arr.filter(m => m.kind !== 'ajuste');
+      if (relevant.length) {
+        const shown = relevant.find(m => m.kind === 'retiro') || relevant[0];
+        return shown.kind === 'ingreso' ? '#22c55e' : '#ef4444';
+      }
+    }
     return i===0 ? color : (v>=values[i-1] ? '#22c55e' : '#ef4444');
   });
   const pointRadii = values.map(() => (values.length>60 ? 0 : 4));
@@ -3308,11 +3447,13 @@ function renderBalanceChart() {
         callbacks: {
           label: (ctx) => {
             const lines = ['Balance actual: $' + ctx.parsed.y.toFixed(2)];
-            const m = markers[ctx.dataIndex];
-            if (m) {
-              if (m.kind==='ingreso') lines.push('💵 Depósito: +$' + m.monto.toFixed(2));
-              else if (m.kind==='retiro') lines.push('🏧 Retiro: -$' + m.monto.toFixed(2));
-              else lines.push('🔧 Ajuste: ' + (m.monto>=0?'+':'') + '$' + m.monto.toFixed(2));
+            const arr = markers[ctx.dataIndex];
+            if (arr && arr.length) {
+              arr.forEach(m => {
+                if (m.kind==='ingreso') lines.push('💵 Depósito: +$' + m.monto.toFixed(2));
+                else if (m.kind==='retiro') lines.push('🏧 Retiro: -$' + m.monto.toFixed(2));
+                else lines.push('🔧 Ajuste: ' + (m.monto>=0?'+':'') + '$' + m.monto.toFixed(2));
+              });
             }
             return lines;
           }
@@ -3704,15 +3845,26 @@ function clearDateRange(){
 function updateChartTipsterFilter(){
   const el=document.getElementById('chartTipsterFilter');if(!el)return;
   const isAll = chartTipsters.length === 0;
+  const pool = chartExcludeArchived ? data.tipsters.filter(t=>!t.archivado) : data.tipsters;
   el.innerHTML = `<button class="tf-btn ${isAll?'active':''}" onclick="toggleChartTipster('all')">Todos</button>` +
-    data.tipsters.map((t,i) => {
+    pool.map((t) => {
+      const i = data.tipsters.indexOf(t);
       const sel = chartTipsters.includes(t.id);
       const col = COLORS[i % COLORS.length];
-      return `<button class="tipster-chip ${sel?'sel':''}" style="--tc:${col}" onclick="toggleChartTipster(${t.id})">${t.name}</button>`;
+      return `<button class="tipster-chip ${sel?'sel':''}" style="--tc:${col}" onclick="toggleChartTipster(${t.id})">${t.archivado?'📦 ':''}${t.name}</button>`;
     }).join('');
 }
+function toggleExcludeArchived() {
+  chartExcludeArchived = !chartExcludeArchived;
+  const btn = document.getElementById('flt-noarch');
+  if (btn) btn.className = 'flt-btn' + (chartExcludeArchived ? ' a-all' : '');
+  updateChartTipsterFilter();
+  renderCharts();
+}
 function getActiveTipsters(){
-  return chartTipsters.length===0 ? data.tipsters : data.tipsters.filter(t=>chartTipsters.includes(t.id));
+  let ts = chartTipsters.length===0 ? data.tipsters : data.tipsters.filter(t=>chartTipsters.includes(t.id));
+  if (chartExcludeArchived) ts = ts.filter(t=>!t.archivado);
+  return ts;
 }
 function getFilteredBets(){
   let ts=getActiveTipsters();
@@ -3884,7 +4036,7 @@ function exportData(){
 function importData(ev){
   const f=ev.target.files[0];if(!f)return;
   const r=new FileReader();
-  r.onload=e=>{try{data=JSON.parse(e.target.result); if(!data.retos) data.retos=[]; ensureBalanceData(); ensureGlobalStakeDefault(); migrateOldTypeLabels(); data.tipsters.forEach(t=>{refreshBankPico(t);maybeRefreshBankPctSnapshot(t);}); save();renderAll();showToast('✅ Datos importados');}catch{showToast('❌ Archivo inválido',false);}};
+  r.onload=e=>{try{data=JSON.parse(e.target.result); if(!data.retos) data.retos=[]; ensureBalanceData(); ensureGlobalStakeDefault(); migrateOldTypeLabels(); ensureNotas(); data.tipsters.forEach(t=>{refreshBankPico(t);maybeRefreshBankPctSnapshot(t);}); save();renderAll();showToast('✅ Datos importados');}catch{showToast('❌ Archivo inválido',false);}};
   r.readAsText(f);ev.target.value='';
 }
 
@@ -3904,6 +4056,9 @@ window.renderStakeQuickBtns=renderStakeQuickBtns;
 window.switchTab=switchTab;
 window.addTipster=addTipster;
 window.deleteTipster=deleteTipster;
+window.archiveTipster=archiveTipster;
+window.unarchiveTipster=unarchiveTipster;
+window.toggleExcludeArchived=toggleExcludeArchived;
 window.deleteBet=deleteBet;
 window.toggleTipster=toggleTipster;
 window.setTipsterSort=setTipsterSort;
@@ -3917,6 +4072,7 @@ window.toggleEditChip=toggleEditChip;
 window.openEditTipsterModal=openEditTipsterModal;
 window.setETMode=setETMode;
 window.toggleETAutoCuota=toggleETAutoCuota;
+window.toggleETForceCuotaSugerida=toggleETForceCuotaSugerida;
 window.toggleAutoCuota=toggleAutoCuota;
 window.addETRow=addETRow;
 window.closeEditTipsterModal=closeEditTipsterModal;
@@ -3978,6 +4134,8 @@ window.updateBalanceInicial=updateBalanceInicial;
 window.setMovTipo=setMovTipo;
 window.addBalanceMov=addBalanceMov;
 window.deleteBalanceMov=deleteBalanceMov;
+window.addNota=addNota;
+window.deleteNota=deleteNota;
 window.setApuestasFilter=setApuestasFilter;
 window.setApuestasFilterJugada=setApuestasFilterJugada;
 window.setApuestasFilterTipster=setApuestasFilterTipster;
