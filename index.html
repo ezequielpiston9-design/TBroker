@@ -558,7 +558,7 @@ select option{background:var(--s2);}
           <button class="flt-btn a-all" id="flt-all" onclick="setChartFilter('all')">🔵 Todas</button>
           <button class="flt-btn" id="flt-played" onclick="setChartFilter('played')">✅ Jugadas</button>
           <button class="flt-btn" id="flt-skipped" onclick="setChartFilter('skipped')">👁 No Jugadas</button>
-          <button class="flt-btn a-all" id="flt-noarch" onclick="toggleExcludeArchived()">📦 No Archivados</button>
+          <button class="flt-btn a-all" id="flt-noarch" onclick="toggleExcludeArchived()">📦 Solo Activos</button>
         </div>
       </div>
       <div><span class="flbl">Tipsters:</span>
@@ -793,7 +793,10 @@ select option{background:var(--s2);}
 <!-- MODAL EDITAR APUESTA -->
 <div class="modal-overlay" id="editModal" style="display:none;" onclick="if(event.target===this)closeEditModal()">
   <div class="modal-box">
-    <div class="modal-title">✏️ Editar Apuesta</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div class="modal-title" style="margin-bottom:0;">✏️ Editar Apuesta</div>
+      <button class="btn-del btn-sm" onclick="deleteBetFromEditModal()">🗑 Borrar apuesta</button>
+    </div>
     <input type="hidden" id="editBetId"><input type="hidden" id="editTipsterId">
     <div class="form-grid">
       <div class="fg">
@@ -1483,7 +1486,7 @@ function deleteTipster(id) {
 }
 function archiveTipster(id) {
   const t = data.tipsters.find(x=>x.id===id); if (!t) return;
-  showConfirm('¿Archivar este tipster? No vas a poder registrarle apuestas nuevas ni va a aparecer en Gráficas hasta que lo desarchives. Sus apuestas y balance quedan guardados tal cual.', () => {
+  showConfirm('¿Archivar este tipster? No vas a poder registrarle apuestas nuevas ni va a aparecer en Gráficas hasta que lo desarchives. Sus apuestas y balance quedan guardados tal cual y SIGUEN sumando al Balance Global.', () => {
     t.archivado = true;
     save(); renderAll(); showToast('📦 Tipster archivado');
   });
@@ -1492,6 +1495,18 @@ function unarchiveTipster(id) {
   const t = data.tipsters.find(x=>x.id===id); if (!t) return;
   t.archivado = false;
   save(); renderAll(); showToast('📤 Tipster desarchivado');
+}
+function deactivateTipster(id) {
+  const t = data.tipsters.find(x=>x.id===id); if (!t) return;
+  showConfirm('¿Desactivar este tipster? Es como archivarlo (no podés registrarle apuestas nuevas ni va a aparecer en Gráficas), pero además su profit deja de sumar al Balance Global. Sus apuestas quedan guardadas, solo se excluyen del cálculo de balance.', () => {
+    t.desactivado = true;
+    save(); renderAll(); showToast('🔌 Tipster desactivado');
+  });
+}
+function reactivateTipster(id) {
+  const t = data.tipsters.find(x=>x.id===id); if (!t) return;
+  t.desactivado = false;
+  save(); renderAll(); showToast('🔌 Tipster reactivado');
 }
 function setTipsterSort(key, el) {
   tipsterSort = key;
@@ -1518,8 +1533,8 @@ function renderTipsterList() {
   const el = document.getElementById('tipsterList');
   const sorted = getSortedTipsters();
   if (!sorted.length) { el.innerHTML='<div class="empty"><div class="empty-icon">⚽</div><p>Sin tipsters. Agrega el primero.</p></div>'; return; }
-  const activos = sorted.filter(t => !t.archivado);
-  const archivados = sorted.filter(t => t.archivado);
+  const activos = sorted.filter(t => !t.archivado && !t.desactivado);
+  const inactivos = sorted.filter(t => t.archivado || t.desactivado);
   const renderCard = (t) => {
     const ci = data.tipsters.indexOf(t);
     const color = COLORS[ci % COLORS.length];
@@ -1528,12 +1543,16 @@ function renderTipsterList() {
     const pc = t.bets.filter(b=>b.played).length, tc = t.bets.length;
     const ratio = avgStakeRatio(t.bets);
     const roi = t.bankroll && t.bankroll > 0 ? s.profit / t.bankroll * 100 : null;
-    return `<div class="tipster-card${t.archivado?' archived-card':''}">
+    const isInactive = t.archivado || t.desactivado;
+    const badge = t.desactivado
+      ? '<span class="badge badge-loss" style="margin-left:5px;">🔌 Desactivado</span>'
+      : t.archivado ? '<span class="badge badge-void" style="margin-left:5px;">📦 Archivado</span>' : '';
+    return `<div class="tipster-card${isInactive?' archived-card':''}">
       <div class="tipster-header" onclick="toggleTipster(${t.id})">
         <div class="tipster-left">
-          <div class="avatar" style="background:${color}${t.archivado?';filter:grayscale(1);opacity:.6;':''}">${t.name.substring(0,2).toUpperCase()}</div>
+          <div class="avatar" style="background:${color}${isInactive?';filter:grayscale(1);opacity:.6;':''}">${t.name.substring(0,2).toUpperCase()}</div>
           <div>
-            <div class="tipster-name">${t.name}${t.archivado?' <span class="badge badge-void" style="margin-left:5px;">📦 Archivado</span>':''}</div>
+            <div class="tipster-name">${t.name}${badge}</div>
             <div style="font-size:0.58rem;color:var(--muted);margin-top:2px;">${pc}/${tc} jugadas
               <div class="winrate-bar" style="width:55px;display:inline-block;vertical-align:middle;margin-left:4px;"><div class="winrate-fill" style="width:${tc?pc/tc*100:0}%"></div></div>
             </div>
@@ -1550,6 +1569,9 @@ function renderTipsterList() {
           ${t.archivado
             ? `<button class="btn-edit btn-sm" onclick="event.stopPropagation();unarchiveTipster(${t.id})" title="Desarchivar">📤</button>`
             : `<button class="btn-edit btn-sm" onclick="event.stopPropagation();archiveTipster(${t.id})" title="Archivar">📦</button>`}
+          ${t.desactivado
+            ? `<button class="btn-edit btn-sm" onclick="event.stopPropagation();reactivateTipster(${t.id})" title="Reactivar">🔌</button>`
+            : `<button class="btn-edit btn-sm" onclick="event.stopPropagation();deactivateTipster(${t.id})" title="Desactivar (no suma al balance)">🔌</button>`}
           <button class="btn-del btn-sm" onclick="event.stopPropagation();deleteTipster(${t.id})" title="Eliminar">🗑</button>
           <span class="chevron" id="chev-${t.id}">▼</span>
         </div>
@@ -1558,8 +1580,8 @@ function renderTipsterList() {
     </div>`;
   };
   let html = activos.map(renderCard).join('');
-  if (archivados.length) {
-    html += `<div class="section-divider" style="margin-top:15px;">📦 Archivados (${archivados.length})</div>` + archivados.map(renderCard).join('');
+  if (inactivos.length) {
+    html += `<div class="section-divider" style="margin-top:15px;">📦 Archivados / 🔌 Desactivados (${inactivos.length})</div>` + inactivos.map(renderCard).join('');
   }
   el.innerHTML = html;
   // re-apply chevron state
@@ -2189,10 +2211,12 @@ function getGlobalBalanceActual() {
   const inicial = data.balanceAdj.inicial || 0;
   const totalIng = data.balanceMovs.filter(m => m.tipo==='ingreso').reduce((s,m) => s+m.monto, 0);
   const totalRet = data.balanceMovs.filter(m => m.tipo==='retiro').reduce((s,m) => s+m.monto, 0);
+  const totalAjuste = data.balanceMovs.filter(m => m.tipo==='ajuste').reduce((s,m) => s+m.monto, 0);
   // El balance SÍ incluye Soñadoras/Retos (a propósito, ver statsBets), por eso usamos t.bets directo.
+  // Los tipsters desactivados NO suman al balance (a diferencia de los archivados, que sí siguen sumando).
   let profitTotal = 0;
-  data.tipsters.forEach(t => { profitTotal += calcStats(t.bets, 'played').profit; });
-  return inicial + totalIng - totalRet + profitTotal;
+  data.tipsters.filter(t => !t.desactivado).forEach(t => { profitTotal += calcStats(t.bets, 'played').profit; });
+  return inicial + totalIng - totalRet + totalAjuste + profitTotal;
 }
 function updateGlobalExpoPanel() {
   const panel = document.getElementById('globalExpoPanel'); if (!panel) return;
@@ -3016,6 +3040,27 @@ function openEditModal(tid, bid) {
   document.getElementById('editModal').style.display='flex';
 }
 function closeEditModal() { document.getElementById('editModal').style.display='none'; }
+function deleteBetFromEditModal() {
+  const tid = parseInt(document.getElementById('editTipsterId').value);
+  const bid = parseInt(document.getElementById('editBetId').value);
+  if (!tid || !bid) return;
+  showConfirm('¿Eliminar esta apuesta?', () => {
+    const t = data.tipsters.find(t=>t.id===tid);
+    if (t) {
+      const bet = t.bets.find(b=>b.id===bid);
+      const rid = bet ? bet.retoId : null;
+      t.bets=t.bets.filter(b=>b.id!==bid);
+      save(); renderAll();
+      refreshExtraTabsIfActive();
+      if (rid) {
+        recomputeReto(rid);
+        if (activeRetoId === rid) { renderRetoInfoPanel(); updateRiskPanel(); }
+      }
+      closeEditModal();
+      showToast('🗑 Apuesta eliminada');
+    }
+  });
+}
 function setEditResult(r) {
   editResult=r;
   ['win','loss','void','pending'].forEach(x=>document.getElementById('ert-'+x).className='rt-btn'+(x===r?' '+x:''));
@@ -3101,7 +3146,7 @@ function renderTipsterChart() {
 // ============================================================
 function updateTipsterSelect() {
   const sel=document.getElementById('bTipster'),cur=sel.value;
-  sel.innerHTML='<option value="">— Seleccionar —</option>'+data.tipsters.filter(t=>!t.archivado).map(t=>`<option value="${t.id}"${t.id==cur?' selected':''}>${t.name}</option>`).join('');
+  sel.innerHTML='<option value="">— Seleccionar —</option>'+data.tipsters.filter(t=>!t.archivado&&!t.desactivado).map(t=>`<option value="${t.id}"${t.id==cur?' selected':''}>${t.name}</option>`).join('');
 }
 function updateGlobalStats() {
   let inv=0,prof=0,won=0,closed=0,total=0,played=0;
@@ -3464,9 +3509,11 @@ function renderBalanceChart() {
 }
 function renderBalanceRanking() {
   const el = document.getElementById('balanceRanking'); if (!el) return;
-  if (!data.tipsters.length) { el.innerHTML = '<div class="no-bets">Sin tipsters registrados.</div>'; return; }
+  const activos = data.tipsters.filter(t => !t.desactivado);
+  if (!activos.length) { el.innerHTML = '<div class="no-bets">Sin tipsters registrados.</div>'; return; }
   const key = balView === 'jugadas' ? 'played' : 'skipped';
-  const rows = data.tipsters.map((t,i) => {
+  const rows = activos.map((t) => {
+    const i = data.tipsters.indexOf(t);
     const s = calcStats(t.bets, key);
     return { name:t.name, color: COLORS[i % COLORS.length], profit:s.profit, yield_:s.yield_, wr:s.wr, bets:s.total };
   }).sort((a,b) => b.profit - a.profit);
@@ -3519,7 +3566,7 @@ function renderBalanceTab() {
   const adj = isJug ? (totalIng - totalRet + totalAjuste) : 0;
   const key = isJug ? 'played' : 'skipped';
   let profitTotal = 0;
-  const perTipster = data.tipsters.map(t => ({ name:t.name, profit: calcStats(t.bets,key).profit }));
+  const perTipster = data.tipsters.filter(t => !t.desactivado).map(t => ({ name:t.name, profit: calcStats(t.bets,key).profit }));
   perTipster.forEach(p => profitTotal += p.profit);
   const balanceActual = inicial + adj + profitTotal;
   const retBase = inicial + adj;
@@ -3845,13 +3892,13 @@ function clearDateRange(){
 function updateChartTipsterFilter(){
   const el=document.getElementById('chartTipsterFilter');if(!el)return;
   const isAll = chartTipsters.length === 0;
-  const pool = chartExcludeArchived ? data.tipsters.filter(t=>!t.archivado) : data.tipsters;
+  const pool = chartExcludeArchived ? data.tipsters.filter(t=>!t.archivado&&!t.desactivado) : data.tipsters;
   el.innerHTML = `<button class="tf-btn ${isAll?'active':''}" onclick="toggleChartTipster('all')">Todos</button>` +
     pool.map((t) => {
       const i = data.tipsters.indexOf(t);
       const sel = chartTipsters.includes(t.id);
       const col = COLORS[i % COLORS.length];
-      return `<button class="tipster-chip ${sel?'sel':''}" style="--tc:${col}" onclick="toggleChartTipster(${t.id})">${t.archivado?'📦 ':''}${t.name}</button>`;
+      return `<button class="tipster-chip ${sel?'sel':''}" style="--tc:${col}" onclick="toggleChartTipster(${t.id})">${t.desactivado?'🔌 ':t.archivado?'📦 ':''}${t.name}</button>`;
     }).join('');
 }
 function toggleExcludeArchived() {
@@ -3863,7 +3910,7 @@ function toggleExcludeArchived() {
 }
 function getActiveTipsters(){
   let ts = chartTipsters.length===0 ? data.tipsters : data.tipsters.filter(t=>chartTipsters.includes(t.id));
-  if (chartExcludeArchived) ts = ts.filter(t=>!t.archivado);
+  if (chartExcludeArchived) ts = ts.filter(t=>!t.archivado&&!t.desactivado);
   return ts;
 }
 function getFilteredBets(){
@@ -4058,8 +4105,11 @@ window.addTipster=addTipster;
 window.deleteTipster=deleteTipster;
 window.archiveTipster=archiveTipster;
 window.unarchiveTipster=unarchiveTipster;
+window.deactivateTipster=deactivateTipster;
+window.reactivateTipster=reactivateTipster;
 window.toggleExcludeArchived=toggleExcludeArchived;
 window.deleteBet=deleteBet;
+window.deleteBetFromEditModal=deleteBetFromEditModal;
 window.toggleTipster=toggleTipster;
 window.setTipsterSort=setTipsterSort;
 window.sortBetsTable=sortBetsTable;
