@@ -181,6 +181,29 @@ select option{background:var(--s2);}
 .modal-box{background:var(--s1);border:1px solid var(--border);border-radius:13px;padding:18px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;}
 .modal-title{font-family:'Unbounded',sans-serif;font-size:0.82rem;font-weight:700;margin-bottom:14px;color:var(--accent);}
 .modal-actions{display:flex;gap:7px;margin-top:14px;}
+/* PICKER (bottom sheet compacto, reemplaza selects nativos de Tipster/Deporte) */
+.picker-trigger{width:100%;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:0.8rem;text-align:left;display:flex;justify-content:space-between;align-items:center;cursor:pointer;gap:8px;}
+.picker-trigger:active{border-color:var(--accent);}
+.picker-trigger .chev{color:var(--muted);font-size:0.65rem;flex-shrink:0;}
+.picker-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;display:flex;align-items:flex-end;justify-content:center;}
+.picker-sheet{background:var(--s1);border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:68vh;overflow-y:auto;}
+.picker-row{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.055);}
+.picker-row:last-child{border-bottom:none;}
+.picker-row:active{background:var(--s2);}
+.picker-row-left{display:flex;align-items:center;gap:9px;min-width:0;}
+.picker-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.picker-name{font-size:0.8rem;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.picker-radio{width:17px;height:17px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;}
+.picker-radio.sel{border-color:var(--accent);background:radial-gradient(circle,var(--accent) 0 42%,transparent 46%);}
+.picker-arrow{color:var(--muted);font-size:0.9rem;flex-shrink:0;}
+.picker-back{color:var(--accent)!important;font-weight:700;}
+.usd-amount{font-family:'Courier New',monospace!important;font-style:italic;letter-spacing:0.3px;}
+.casa-1xbet{background:#0a1628;border:2px solid #1a3a6e;color:#fff;font-family:'Arial Black',Arial,sans-serif;font-weight:900;font-style:italic;letter-spacing:-0.5px;}
+.casa-1xbet .casa-accent{color:#0a84ff;}
+.casa-bet365{background:#046835;border:2px solid #f7d117;color:#fff;font-family:'Arial',sans-serif;font-weight:800;letter-spacing:-0.3px;}
+.casa-bet365 .casa-accent{color:#f7d117;}
+.casa-btn{flex:1;padding:11px 8px;border-radius:9px;cursor:pointer;text-align:center;font-size:0.95rem;transition:all .18s;opacity:.55;}
+.casa-btn.sel{opacity:1;box-shadow:0 2px 10px rgba(0,0,0,.35);transform:scale(1.02);}
 ::-webkit-scrollbar{width:4px;height:4px;}
 ::-webkit-scrollbar-track{background:var(--bg);}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
@@ -217,15 +240,27 @@ select option{background:var(--s2);}
 <body>
 
 <header>
-  <h1>🎯 TipsterBook</h1>
-  <span class="hbadge">PRO</span>
-  <span id="syncStatus">🔄 Conectando...</span>
+  <h1>TipsterBook</h1>
+  <span id="syncStatus">Conectando...</span>
   <div class="hactions">
-    <button class="hbtn" onclick="exportData()">⬇ Exportar</button>
-    <button class="hbtn" onclick="document.getElementById('importFile').click()">⬆ Importar</button>
+    <button class="hbtn" id="moreMenuBtn" onclick="toggleMoreMenu()" style="font-size:0.95rem;padding:4px 11px;">⋮</button>
     <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
   </div>
 </header>
+
+<!-- MENÚ MÁS -->
+<div class="picker-overlay" id="moreMenuOverlay" style="display:none;" onclick="if(event.target===this)closeMoreMenu()">
+  <div class="picker-sheet">
+    <div class="picker-row" onclick="closeMoreMenu();switchTab('notas')"><div class="picker-row-left"><span class="picker-name">📝 Notas</span></div></div>
+    <div class="picker-row" onclick="closeMoreMenu();exportData()"><div class="picker-row-left"><span class="picker-name">📤 Exportar</span></div></div>
+    <div class="picker-row" onclick="closeMoreMenu();document.getElementById('importFile').click()"><div class="picker-row-left"><span class="picker-name">📥 Importar</span></div></div>
+    <div class="picker-row" onclick="closeMoreMenu();switchTab('config')"><div class="picker-row-left"><span class="picker-name">⚙️ Configuración</span></div></div>
+  </div>
+</div>
+
+<!-- BOTÓN FLOTANTE: NUEVA APUESTA -->
+<button id="fabNueva" onclick="switchTab('nueva')" title="Nueva apuesta"
+  style="position:fixed;right:16px;bottom:22px;z-index:150;width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:1.6rem;box-shadow:0 4px 14px rgba(108,99,255,.45);cursor:pointer;display:flex;align-items:center;justify-content:center;">＋</button>
 
 <div class="container">
 
@@ -250,13 +285,14 @@ select option{background:var(--s2);}
 
 <!-- TABS -->
 <div class="tabs">
-  <button class="tab active" onclick="switchTab('tipsters')">👤 Tipsters</button>
-  <button class="tab" onclick="switchTab('nueva')">➕ Nueva Apuesta</button>
-  <button class="tab" onclick="switchTab('unidades')">📐 Unidades</button>
-  <button class="tab" onclick="switchTab('graficas')">📊 Gráficas</button>
-  <button class="tab" onclick="switchTab('balance')">💰 Balance</button>
-  <button class="tab" onclick="switchTab('apuestas')">📋 Apuestas</button>
-  <button class="tab" onclick="switchTab('notas')">📝 Notas</button>
+  <button class="tab active" data-group="tipsters" onclick="switchTab('tipsters')">👤 Tipsters</button>
+  <button class="tab" data-group="apuestas" onclick="switchTab('apuestas')">📋 Apuestas</button>
+  <button class="tab" data-group="analisis" onclick="openAnalisis()">📊 Análisis</button>
+</div>
+
+<!-- PICKER: Vista (dentro de Análisis) -->
+<div class="picker-overlay" id="vistaPickerOverlay" style="display:none;" onclick="if(event.target===this)closeVistaPicker()">
+  <div class="picker-sheet" id="vistaPickerList"></div>
 </div>
 
 <!-- ===== TAB TIPSTERS ===== -->
@@ -289,54 +325,80 @@ select option{background:var(--s2);}
 
 <!-- ===== TAB NUEVA APUESTA ===== -->
 <div id="tab-nueva" class="tab-content">
-  <div class="card">
-    <div class="card-title">Registrar Apuesta</div>
-    <div class="form-grid">
-      <div class="fg"><label>Tipster</label><select id="bTipster" onchange="onTipsterChange()"><option value="">— Seleccionar —</option></select></div>
+  <div class="card" style="padding:12px;">
+    <div class="card-title" style="margin-bottom:8px;">Registrar Apuesta</div>
+    <input type="hidden" id="bCasa" value="1xbet">
+
+    <!-- 1. TIPSTER -->
+    <div class="form-grid" style="margin-bottom:8px;">
+      <div class="fg"><label>Tipster</label>
+        <button type="button" class="picker-trigger" id="bTipsterTrigger" onclick="openTipsterPicker('bTipster')">
+          <span class="picker-trigger-text">— Seleccionar tipster —</span><span class="chev">▾</span>
+        </button>
+        <select id="bTipster" onchange="onTipsterChange()" style="display:none;"><option value="">— Seleccionar —</option></select>
+      </div>
     </div>
 
-    <!-- JUGADA (justo después de elegir Tipster, así el resto del form ya sabe qué tabla/cálculo usar) -->
-    <div class="jugada-section">
+    <!-- 2. ¿LA JUGASTE? -->
+    <div class="jugada-section" style="padding:9px;margin-bottom:8px;">
       <div class="slabel">¿La jugaste vos?</div>
       <div class="jugada-toggle">
         <button class="jt-btn" id="jt-played" onclick="setJugada(true)">✅ Sí, la jugué</button>
         <button class="jt-btn" id="jt-skipped" onclick="setJugada(false)">👁 No, solo registro</button>
       </div>
-      <div style="font-size:0.6rem;color:var(--muted);margin-top:5px;">Las "no jugadas" analizan el rendimiento real del tipster sin afectar tu profit.</div>
-      <div id="bankBlockWarning" style="display:none;margin-top:8px;padding:8px 11px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.35);border-radius:8px;font-size:0.68rem;color:var(--red);font-weight:700;"></div>
+      <div id="bankBlockWarning" style="display:none;margin-top:7px;padding:7px 10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.35);border-radius:8px;font-size:0.66rem;color:var(--red);font-weight:700;"></div>
     </div>
 
-    <!-- EXPOSICIÓN GLOBAL: cuánto tenés en juego sumando TODOS los tipsters, contra tu balance real -->
-    <div class="card" id="globalExpoPanel" style="background:rgba(6,182,212,.05);border-color:rgba(6,182,212,.2);margin-bottom:11px;">
-      <div class="card-title" style="color:var(--cyan);">🌐 Exposición Global (todos los tipsters)</div>
-      <div class="pboxes">
-        <div class="pbox"><div class="pbox-lbl">En juego (todos)</div><div class="pbox-val gold" id="ge-enjuego">$0</div></div>
-        <div class="pbox"><div class="pbox-lbl">+ Esta apuesta</div><div class="pbox-val" id="ge-estaapuesta">$0</div></div>
-        <div class="pbox"><div class="pbox-lbl">Balance Actual Global</div><div class="pbox-val cyan" id="ge-balance">$0</div></div>
-        <div class="pbox"><div class="pbox-lbl">Disponible después</div><div class="pbox-val-lg" id="ge-disponible">$0</div></div>
-        <div class="pbox"><div class="pbox-lbl">% del balance comprometido</div><div class="pbox-val" id="ge-pct">0%</div></div>
+    <!-- 3. STAKE + MONTO + CUOTA (una sola barra, para no tener que bajar) -->
+    <div style="display:flex;gap:6px;margin-bottom:6px;">
+      <div class="fg" style="flex:1;min-width:0;">
+        <label style="display:flex;align-items:center;justify-content:space-between;gap:3px;font-size:0.68rem;">
+          <span>Stake</span>
+          <span class="auto-badge on" id="autoStakeBadge" onclick="toggleAutoStake()" title="Auto: el monto se calcula solo" style="padding:2px 6px;font-size:0.55rem;">🔗</span>
+        </label>
+        <input type="number" id="bStake" min="0.5" max="20" step="0.5" placeholder="5" oninput="onStakeInput()" style="padding:7px 6px;">
       </div>
-      <div style="font-size:0.58rem;color:var(--muted);margin-top:6px;">Esto suma lo que está en juego en TODOS los tipsters (no solo el que elegiste), contra tu Balance Actual real de la pestaña Balance.</div>
+      <div class="fg" style="flex:1;min-width:0;"><label id="bMontoLabel" style="font-size:0.68rem;">Dinero ($)</label><input type="number" id="bMonto" placeholder="100" oninput="onMontoInput()" style="padding:7px 6px;"></div>
+      <div class="fg" style="flex:1;min-width:0;">
+        <label style="display:flex;align-items:center;justify-content:space-between;gap:3px;font-size:0.68rem;">
+          <span>Cuota</span>
+          <span class="auto-badge on" id="autoCuotaBadge" onclick="toggleAutoCuota()" title="Auto: se pre-rellena con la cuota media del tipster" style="padding:2px 6px;font-size:0.55rem;">📐</span>
+        </label>
+        <input type="number" id="bCuota" step="0.01" placeholder="2.10" oninput="updatePreview()" style="padding:7px 6px;">
+      </div>
+    </div>
+    <div id="stakeQuickBtns" style="display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap;"></div>
+
+    <div id="exceptionRow" style="display:none;margin-bottom:8px;padding:7px 10px;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:8px;">
+      <span id="exceptionRowText" style="font-size:0.63rem;color:var(--gold);font-weight:700;">⚠️ Modo excepción activo para esta apuesta.</span>
     </div>
 
-    <div class="form-grid">
-      <div class="fg"><label>Descripción <span class="opt">(opcional)</span></label><input type="text" id="bDesc" placeholder=""></div>
-      <div class="fg" style="grid-column:span 1;">
-        <label style="display:flex;align-items:center;justify-content:space-between;">
-          <span>Stake (unidades)</span>
-          <span class="auto-badge on" id="autoStakeBadge" onclick="toggleAutoStake()" title="Auto: el monto se calcula solo">🔗 Auto</span>
-        </label>
-        <input type="number" id="bStake" min="0.5" max="20" step="0.5" placeholder="5" oninput="onStakeInput()">
-        <div id="stakeQuickBtns" style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap;"></div>
+    <!-- 4. TIPO — se mantienen TODOS visibles -->
+    <div style="margin-bottom:8px;">
+      <div class="fg" style="margin-bottom:5px;"><label>Tipo de Apuesta</label></div>
+      <div class="chip-row" id="betTypeChips">
+        <div class="chip" data-val="Ganador" onclick="toggleChip(this)">🏆 Ganador</div>
+        <div class="chip" data-val="Ganador 1/2" onclick="toggleChip(this)">½ Mitad</div>
+        <div class="chip" data-val="Goles" onclick="toggleChip(this)">⚽ Goles</div>
+        <div class="chip" data-val="Ambos Marcan" onclick="toggleChip(this)">🥅 AM</div>
+        <div class="chip" data-val="Hándicap" onclick="toggleChip(this)">📐 Hándicap</div>
+        <div class="chip" data-val="Over" onclick="toggleChip(this)">📈 Over</div>
+        <div class="chip" data-val="Under" onclick="toggleChip(this)">📉 Under</div>
+        <div class="chip" data-val="Marcador" onclick="toggleChip(this)">🎯 Marcador</div>
+        <div class="chip" data-val="Portería 0" onclick="toggleChip(this)">🧤 Portería 0</div>
+        <div class="chip" data-val="Tarjetas" onclick="toggleChip(this)">🟨 Tarjetas</div>
+        <div class="chip" data-val="Corners" onclick="toggleChip(this)">🚩 Corners</div>
+        <div class="chip" data-val="Tiros al Arco" onclick="toggleChip(this)">🥅 Tiros al Arco</div>
+        <div class="chip" data-val="Tiros" onclick="toggleChip(this)">👟 Tiros</div>
+        <div class="chip" data-val="Individual" onclick="toggleChip(this)">👤 Individual</div>
+        <div class="chip" data-val="Clasificar" onclick="toggleChip(this)">🏅 Clasificar</div>
+        <div class="chip" data-val="Doble Oportunidad" onclick="toggleChip(this)">🔁 Doble Op.</div>
+        <div class="chip" data-val="Live" onclick="toggleChip(this)">🔴 Live</div>
       </div>
-      <div class="fg"><label>Dinero Apostado ($)</label><input type="number" id="bMonto" placeholder="100" oninput="onMontoInput()"></div>
-      <div class="fg">
-        <label style="display:flex;align-items:center;justify-content:space-between;">
-          <span>Cuota / Odd</span>
-          <span class="auto-badge on" id="autoCuotaBadge" onclick="toggleAutoCuota()" title="Auto: se pre-rellena con la cuota media del tipster">📐 Auto</span>
-        </label>
-        <input type="number" id="bCuota" step="0.01" placeholder="2.10" oninput="updatePreview()">
-      </div>
+    </div>
+
+    <!-- 5. Nº EVENTOS + 6. DEPORTE -->
+    <div class="form-grid" style="margin-bottom:8px;">
       <div class="fg"><label>Nº de Eventos</label>
         <div style="display:flex;align-items:center;gap:6px;">
           <button type="button" class="btn-ghost btn-sm" style="padding:8px 12px;font-size:0.9rem;" onclick="stepEventos(-1)">−</button>
@@ -345,29 +407,60 @@ select option{background:var(--s2);}
         </div>
       </div>
       <div class="fg"><label>Deporte</label>
-        <select id="bDeporte" onchange="onDeporteChange()">
-          <option value="Fútbol Europeo">⚽ Fútbol Europeo</option>
-          <option value="Fútbol Latino">⚽ Fútbol Latino</option>
-          <option value="Fútbol Otro">⚽ Fútbol Otro</option>
-          <option value="Basketball">🏀 Basketball</option>
-          <option value="Tenis">🎾 Tenis</option>
-          <option value="Boxeo">🥊 Boxeo</option>
-          <option value="LoL">🎮 LoL</option>
-          <option value="CS:GO/Valo">🎮 CS:GO/Valo</option>
-          <option value="Otro">🎯 Otro</option>
-        </select>
+        <button type="button" class="picker-trigger" id="bDeporteTrigger" onclick="openDeportePicker('bDeporte')">
+          <span class="picker-trigger-text">⚽ Fútbol Europeo</span><span class="chev">▾</span>
+        </button>
+        <input type="hidden" id="bDeporte" value="Fútbol Europeo">
       </div>
-      <div class="fg"><label>Fecha</label><input type="date" id="bFecha" onchange="updateRiskPanel()"></div>
     </div>
 
-    <!-- MODO RETO TOGGLE -->
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:11px;flex-wrap:wrap;">
-      <button class="auto-badge" id="retoModeBadge" onclick="toggleRetoMode()" style="font-size:0.72rem;padding:6px 13px;">🎯 Modo Reto: OFF</button>
-      <span style="font-size:0.6rem;color:var(--muted);">Apostá según el modo elegido (mitad, escalera, etc.) hasta ganar o perder el reto.</span>
+    <!-- 7. RESULTADO -->
+    <div style="margin-bottom:8px;">
+      <div class="fg" style="margin-bottom:5px;"><label>Resultado</label></div>
+      <div class="result-toggle">
+        <button class="rt-btn" id="rt-win" onclick="setResult('win')">✅ Ganada</button>
+        <button class="rt-btn" id="rt-loss" onclick="setResult('loss')">❌ Perdida</button>
+        <button class="rt-btn" id="rt-void" onclick="setResult('void')">↩️ Void</button>
+        <button class="rt-btn" id="rt-pending" onclick="setResult('pending')">⏳ Pendiente</button>
+      </div>
     </div>
+
+    <!-- 8. PREVIEW + GUARDAR -->
+    <div class="preview-box" id="bPreview" style="padding:9px 11px;">
+      <div class="preview-title" style="margin-bottom:5px;">Vista Previa</div>
+      <div class="preview-row"><span>Monto apostado</span><span id="prev-monto">—</span></div>
+      <div class="preview-row"><span>Retorno bruto si gana</span><span id="prev-retorno">—</span></div>
+      <div class="preview-row"><span>Profit neto si gana</span><span id="prev-profit" style="color:var(--green)">—</span></div>
+      <div class="preview-row"><span>Pérdida si pierde</span><span id="prev-loss" style="color:var(--red)">—</span></div>
+      <div class="preview-row" id="prev-units-row" style="display:none"><span>Unidades (gana / pierde)</span><span id="prev-units">—</span></div>
+    </div>
+    <div class="section-actions">
+      <button class="btn btn-primary" onclick="saveBet()">💾 Guardar Apuesta</button>
+      <button class="btn btn-ghost" onclick="clearForm()">🗑 Limpiar</button>
+    </div>
+  </div>
+
+  <!-- DEBAJO: Fecha, Descripción, Soñadora + Reto -->
+  <div class="card" style="padding:12px;margin-top:9px;">
+    <div class="form-grid" style="margin-bottom:8px;">
+      <div class="fg"><label>Fecha</label><input type="date" id="bFecha" onchange="updateRiskPanel()"></div>
+      <div class="fg"><label>Descripción <span class="opt">(opcional)</span></label><input type="text" id="bDesc" placeholder=""></div>
+    </div>
+    <div style="margin-bottom:9px;">
+      <div class="fg" style="margin-bottom:5px;"><label>Casa</label></div>
+      <div style="display:flex;gap:8px;">
+        <div class="casa-btn casa-1xbet sel" id="curcasa-1xbet" onclick="setCurCasa('1xbet')"><span class="casa-accent">1</span>xbet</div>
+        <div class="casa-btn casa-bet365" id="curcasa-bet365" onclick="setCurCasa('bet365')">bet<span class="casa-accent">365</span></div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <button class="auto-badge" id="sonadoraBadge" onclick="toggleSonadora()" style="font-size:0.72rem;padding:6px 13px;">🌙 Soñadora: OFF</button>
+      <button class="auto-badge" id="retoModeBadge" onclick="toggleRetoMode()" style="font-size:0.72rem;padding:6px 13px;">🎯 Modo Reto: OFF</button>
+    </div>
+    <div style="font-size:0.58rem;color:var(--muted);margin-top:6px;">🌙 Soñadora: apuestas de cuota alta (referencia: 6, 10, 40, 900+). 🎯 Reto: apostá según el modo elegido hasta ganar o perder.</div>
 
     <!-- PANEL RETO ACTIVO -->
-    <div class="card" id="retoInfoPanel" style="display:none;background:rgba(245,158,11,.06);border-color:rgba(245,158,11,.25);margin-bottom:11px;">
+    <div class="card" id="retoInfoPanel" style="display:none;background:rgba(245,158,11,.06);border-color:rgba(245,158,11,.25);margin-top:9px;">
       <div class="card-title" style="color:var(--gold);">🎯 Reto Activo</div>
       <div class="pboxes">
         <div class="pbox"><div class="pbox-lbl">Modo</div><div class="pbox-val gold" id="rp-mode">—</div></div>
@@ -388,101 +481,66 @@ select option{background:var(--s2);}
         <button class="btn btn-ghost btn-sm" onclick="cancelActiveReto()" style="color:var(--muted2);">🚫 Cancelar (no cuenta)</button>
       </div>
     </div>
+  </div>
 
-    <!-- CALCULADORA DE RIESGO EN VIVO -->
-    <div class="card" id="riskPanel" style="display:none;margin-bottom:11px;">
-      <div class="card-title">⚠️ Calculadora de Riesgo en Vivo</div>
-      <div id="riskNoBank" class="no-bets" style="display:none;">Configurá el bankroll del tipster (⚙️) para activar el panel de riesgo.</div>
-      <div id="riskContent">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:11px;flex-wrap:wrap;">
-          <span class="semaforo-badge" id="riskSemaforo">⏳ —</span>
-        </div>
+  <!-- MÁS ABAJO: ANÁLISIS Y RIESGO (colapsable) -->
+  <div class="card" style="padding:12px;margin-top:9px;">
+    <div class="card-title" onclick="toggleAnalisisRiesgo()" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;margin-bottom:0;">
+      <span>📊 Análisis y Riesgo</span><span id="analisisRiesgoChev" style="color:var(--muted);">▸</span>
+    </div>
+    <div id="analisisRiesgoContent" style="display:none;margin-top:9px;">
+      <!-- EXPOSICIÓN GLOBAL -->
+      <div class="card" id="globalExpoPanel" style="background:rgba(6,182,212,.05);border-color:rgba(6,182,212,.2);margin-bottom:9px;">
+        <div class="card-title" id="globalExpoTitle" style="color:var(--cyan);">🌐 Exposición Global (todos los tipsters)</div>
         <div class="pboxes">
-          <div class="pbox"><div class="pbox-lbl">% del Bank (esta apuesta)</div><div class="pbox-val-lg" id="rk-stakepct">0%</div></div>
-          <div class="pbox" id="rk-exp-box"><div class="pbox-lbl" id="rk-exp-lbl">Exposición Total Hoy</div><div class="pbox-val-lg" id="rk-exppct">0%</div></div>
-          <div class="pbox"><div class="pbox-lbl">Bank si Pierde</div><div class="pbox-val" id="rk-bankpierde">$0</div></div>
-          <div class="pbox"><div class="pbox-lbl">Retorno / Drawdown</div>
-            <div style="display:flex;gap:7px;justify-content:center;align-items:baseline;flex-wrap:wrap;">
-              <span class="pbox-val" id="rk-retorno">0%</span>
-              <span style="color:var(--muted);font-size:0.62rem;">/</span>
-              <span class="pbox-val" id="rk-ddpico">-0%</span>
-            </div>
+          <div class="pbox"><div class="pbox-lbl">En juego (todos)</div><div class="pbox-val gold" id="ge-enjuego">$0</div></div>
+          <div class="pbox"><div class="pbox-lbl">+ Esta apuesta</div><div class="pbox-val" id="ge-estaapuesta">$0</div></div>
+          <div class="pbox"><div class="pbox-lbl">Balance Actual Global</div><div class="pbox-val cyan" id="ge-balance">$0</div></div>
+          <div class="pbox"><div class="pbox-lbl">Disponible después</div><div class="pbox-val-lg" id="ge-disponible">$0</div></div>
+          <div class="pbox"><div class="pbox-lbl">% del balance comprometido</div><div class="pbox-val" id="ge-pct">0%</div></div>
+        </div>
+        <div style="font-size:0.58rem;color:var(--muted);margin-top:6px;">Esto suma lo que está en juego en TODOS los tipsters (no solo el que elegiste), contra tu Balance Actual real de la pestaña Balance.</div>
+      </div>
+
+      <!-- CALCULADORA DE RIESGO (incluye Drawdown y Predicciones/Simulación) -->
+      <div class="card" id="riskPanel" style="display:none;">
+        <div class="card-title">⚠️ Calculadora de Riesgo en Vivo</div>
+        <div id="riskNoBank" class="no-bets" style="display:none;">Configurá el bankroll del tipster (⚙️) para activar el panel de riesgo.</div>
+        <div id="riskContent">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:11px;flex-wrap:wrap;">
+            <span class="semaforo-badge" id="riskSemaforo">⏳ —</span>
           </div>
-          <div class="pbox"><div class="pbox-lbl">Prob. perder 2 seguidas</div><div class="pbox-val" id="rk-prob2">0%</div></div>
+          <div class="pboxes">
+            <div class="pbox"><div class="pbox-lbl">% del Bank (esta apuesta)</div><div class="pbox-val-lg" id="rk-stakepct">0%</div></div>
+            <div class="pbox" id="rk-exp-box"><div class="pbox-lbl" id="rk-exp-lbl">Exposición Total Hoy</div><div class="pbox-val-lg" id="rk-exppct">0%</div></div>
+            <div class="pbox"><div class="pbox-lbl">Bank si Pierde</div><div class="pbox-val" id="rk-bankpierde">$0</div></div>
+            <div class="pbox"><div class="pbox-lbl">Retorno / Drawdown</div>
+              <div style="display:flex;gap:7px;justify-content:center;align-items:baseline;flex-wrap:wrap;">
+                <span class="pbox-val" id="rk-retorno">0%</span>
+                <span style="color:var(--muted);font-size:0.62rem;">/</span>
+                <span class="pbox-val" id="rk-ddpico">-0%</span>
+              </div>
+            </div>
+            <div class="pbox"><div class="pbox-lbl">Prob. perder 2 seguidas</div><div class="pbox-val" id="rk-prob2">0%</div></div>
+          </div>
+          <div class="section-divider">🎲 Simulación a Futuro (100 apuestas, 2000 escenarios)</div>
+          <div class="pboxes">
+            <div class="pbox"><div class="pbox-lbl">Drawdown 60%+</div><div class="pbox-val gold" id="rk-sim60">0%</div></div>
+            <div class="pbox"><div class="pbox-lbl">Drawdown 80%+</div><div class="pbox-val red" id="rk-sim80">0%</div></div>
+            <div class="pbox"><div class="pbox-lbl">Ruina Total</div><div class="pbox-val red" id="rk-simruin">0%</div></div>
+          </div>
+          <div style="font-size:0.58rem;color:var(--muted);margin-top:6px;">⚠️ Esto es una advertencia, no un bloqueo. La decisión final es tuya.</div>
         </div>
-        <div class="section-divider">🎲 Simulación a Futuro (100 apuestas, 2000 escenarios)</div>
-        <div class="pboxes">
-          <div class="pbox"><div class="pbox-lbl">Drawdown 60%+</div><div class="pbox-val gold" id="rk-sim60">0%</div></div>
-          <div class="pbox"><div class="pbox-lbl">Drawdown 80%+</div><div class="pbox-val red" id="rk-sim80">0%</div></div>
-          <div class="pbox"><div class="pbox-lbl">Ruina Total</div><div class="pbox-val red" id="rk-simruin">0%</div></div>
-        </div>
-        <div style="font-size:0.58rem;color:var(--muted);margin-top:6px;">⚠️ Esto es una advertencia, no un bloqueo. La decisión final es tuya.</div>
       </div>
-    </div>
-
-    <!-- TIPO -->
-    <div style="margin-bottom:11px;">
-      <div class="fg" style="margin-bottom:6px;"><label>Tipo de Apuesta</label></div>
-      <div class="chip-row" id="betTypeChips">
-        <div class="chip" data-val="Ganador" onclick="toggleChip(this)">🏆 Ganador</div>
-        <div class="chip" data-val="Ganador 1/2" onclick="toggleChip(this)">½ Mitad</div>
-        <div class="chip" data-val="Goles" onclick="toggleChip(this)">⚽ Goles</div>
-        <div class="chip" data-val="Ambos Marcan" onclick="toggleChip(this)">🥅 AM</div>
-        <div class="chip" data-val="Hándicap" onclick="toggleChip(this)">📐 Hándicap</div>
-        <div class="chip" data-val="Over" onclick="toggleChip(this)">📈 Over</div>
-        <div class="chip" data-val="Under" onclick="toggleChip(this)">📉 Under</div>
-        <div class="chip" data-val="Marcador" onclick="toggleChip(this)">🎯 Marcador</div>
-        <div class="chip" data-val="Portería 0" onclick="toggleChip(this)">🧤 Portería 0</div>
-        <div class="chip" data-val="Tarjetas" onclick="toggleChip(this)">🟨 Tarjetas</div>
-        <div class="chip" data-val="Corners" onclick="toggleChip(this)">🚩 Corners</div>
-        <div class="chip" data-val="Individual" onclick="toggleChip(this)">👤 Individual</div>
-        <div class="chip" data-val="Clasificar" onclick="toggleChip(this)">🏅 Clasificar</div>
-        <div class="chip" data-val="Doble Oportunidad" onclick="toggleChip(this)">🔁 Doble Op.</div>
-        <div class="chip" data-val="Live" onclick="toggleChip(this)">🔴 Live</div>
-      </div>
-    </div>
-
-    <!-- SOÑADORA (independiente del Tipo de Apuesta) -->
-    <div style="margin-bottom:11px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-      <button class="auto-badge" id="sonadoraBadge" onclick="toggleSonadora()" style="font-size:0.72rem;padding:6px 13px;">🌙 Soñadora: OFF</button>
-      <span style="font-size:0.6rem;color:var(--muted);">Marcala a mano para apuestas de cuota alta (referencia: 6, 10, 40, 900+).</span>
-    </div>
-
-    <!-- EXCEPCION AUTO-STAKE -->
-    <div id="exceptionRow" style="display:none;margin-bottom:11px;padding:9px 11px;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:8px;">
-      <span id="exceptionRowText" style="font-size:0.65rem;color:var(--gold);font-weight:700;">⚠️ Modo excepción activo para esta apuesta.</span>
-    </div>
-
-    <!-- RESULTADO -->
-    <div style="margin-bottom:11px;">
-      <div class="fg" style="margin-bottom:6px;"><label>Resultado</label></div>
-      <div class="result-toggle">
-        <button class="rt-btn" id="rt-win" onclick="setResult('win')">✅ Ganada</button>
-        <button class="rt-btn" id="rt-loss" onclick="setResult('loss')">❌ Perdida</button>
-        <button class="rt-btn" id="rt-void" onclick="setResult('void')">↩️ Void</button>
-        <button class="rt-btn" id="rt-pending" onclick="setResult('pending')">⏳ Pendiente</button>
-      </div>
-    </div>
-
-    <!-- PREVIEW -->
-    <div class="preview-box" id="bPreview">
-      <div class="preview-title">Vista Previa</div>
-      <div class="preview-row"><span>Monto apostado</span><span id="prev-monto">—</span></div>
-      <div class="preview-row"><span>Retorno bruto si gana</span><span id="prev-retorno">—</span></div>
-      <div class="preview-row"><span>Profit neto si gana</span><span id="prev-profit" style="color:var(--green)">—</span></div>
-      <div class="preview-row"><span>Pérdida si pierde</span><span id="prev-loss" style="color:var(--red)">—</span></div>
-      <div class="preview-row" id="prev-units-row" style="display:none"><span>Unidades (gana / pierde)</span><span id="prev-units">—</span></div>
-    </div>
-
-    <div class="section-actions">
-      <button class="btn btn-primary" onclick="saveBet()">💾 Guardar Apuesta</button>
-      <button class="btn btn-ghost" onclick="clearForm()">🗑 Limpiar</button>
     </div>
   </div>
 </div>
 
 <!-- ===== TAB UNIDADES ===== -->
 <div id="tab-unidades" class="tab-content">
+  <button type="button" class="picker-trigger vista-trigger" onclick="openVistaPicker()" style="max-width:200px;margin-bottom:11px;">
+    <span class="vista-trigger-text">📐 Unidades</span><span class="chev">▾</span>
+  </button>
   <div class="stats-strip">
     <div class="stat-box"><div class="stat-lbl">U. Net (jug)</div><div class="stat-val green" id="u-net-p">+0u</div></div>
     <div class="stat-box"><div class="stat-lbl">Yield U. (jug)</div><div class="stat-val cyan" id="u-yield-p">0%</div></div>
@@ -543,6 +601,9 @@ select option{background:var(--s2);}
 
 <!-- ===== TAB GRAFICAS ===== -->
 <div id="tab-graficas" class="tab-content">
+  <button type="button" class="picker-trigger vista-trigger" onclick="openVistaPicker()" style="max-width:200px;margin-bottom:11px;">
+    <span class="vista-trigger-text">📈 Gráficas</span><span class="chev">▾</span>
+  </button>
   <div class="tabs subtabs" style="margin-bottom:11px;">
     <button class="tab subtab active" id="gst-apuestas" onclick="setGraficasSubView('apuestas')">📊 Apuestas</button>
     <button class="tab subtab" id="gst-retos" onclick="setGraficasSubView('retos')">🎯 Retos</button>
@@ -663,6 +724,15 @@ select option{background:var(--s2);}
 
 <!-- ===== TAB BALANCE ===== -->
 <div id="tab-balance" class="tab-content">
+  <button type="button" class="picker-trigger vista-trigger" onclick="openVistaPicker()" style="max-width:200px;margin-bottom:11px;">
+    <span class="vista-trigger-text">💰 Balance</span><span class="chev">▾</span>
+  </button>
+  <div style="margin-bottom:11px;"><span class="flbl">Casa:</span>
+    <div style="display:flex;gap:8px;margin-top:5px;">
+      <div class="casa-btn casa-1xbet sel" id="balc-1xbet" onclick="setBalCasa('1xbet')"><span class="casa-accent">1</span>xbet</div>
+      <div class="casa-btn casa-bet365" id="balc-bet365" onclick="setBalCasa('bet365')">bet<span class="casa-accent">365</span></div>
+    </div>
+  </div>
   <div style="margin-bottom:11px;"><span class="flbl">Ver:</span>
     <div class="filter-bar" style="margin-top:5px;">
       <button class="flt-btn a-played" id="balv-jugadas" onclick="setBalanceView('jugadas')">✅ Jugadas</button>
@@ -690,27 +760,26 @@ select option{background:var(--s2);}
   </div>
   <div class="card" style="margin-bottom:11px;">
     <div class="card-title" id="bal-chart-title">Evolución del Balance (Jugadas)</div>
-    <div class="period-bar" style="margin-bottom:9px;">
+    <div class="period-bar" style="margin-bottom:6px;">
       <button class="period-btn active" data-balperiod="all" onclick="setBalancePeriod('all')">Todo</button>
-      <button class="period-btn" data-balperiod="1y" onclick="setBalancePeriod('1y')">1 Año</button>
-      <button class="period-btn" data-balperiod="6m" onclick="setBalancePeriod('6m')">6 Meses</button>
-      <button class="period-btn" data-balperiod="3m" onclick="setBalancePeriod('3m')">3 Meses</button>
-      <button class="period-btn" data-balperiod="1m" onclick="setBalancePeriod('1m')">1 Mes</button>
-      <button class="period-btn" data-balperiod="1w" onclick="setBalancePeriod('1w')">1 Semana</button>
+      <button class="period-btn" data-balperiod="1y" onclick="setBalancePeriod('1y')">1A</button>
+      <button class="period-btn" data-balperiod="6m" onclick="setBalancePeriod('6m')">6M</button>
+      <button class="period-btn" data-balperiod="3m" onclick="setBalancePeriod('3m')">3M</button>
+      <button class="period-btn" data-balperiod="1m" onclick="setBalancePeriod('1m')">1M</button>
+      <button class="period-btn" data-balperiod="1w" onclick="setBalancePeriod('1w')">1S</button>
     </div>
-    <div style="margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-      <span class="flbl">Rango personalizado:</span>
-      <input type="date" id="balDateFrom" style="width:140px;padding:5px 9px;font-size:0.72rem;" onchange="setBalDateRange()">
-      <span style="color:var(--muted);font-size:0.75rem;">→</span>
-      <input type="date" id="balDateTo" style="width:140px;padding:5px 9px;font-size:0.72rem;" onchange="setBalDateRange()">
-      <button class="period-btn" onclick="clearBalDateRange()" style="padding:4px 9px;">✕ Limpiar</button>
-      <span id="balDateRangeLabel" style="font-size:0.65rem;color:var(--cyan);font-family:'DM Mono',monospace;"></span>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:0.65rem;color:var(--muted2);margin-bottom:9px;">
+      <span>Desde</span>
+      <input type="date" id="balDateFrom" style="width:118px;padding:3px 7px;font-size:0.65rem;" onchange="setBalDateRange()">
+      <span>→ Hasta</span>
+      <input type="date" id="balDateTo" style="width:118px;padding:3px 7px;font-size:0.65rem;" onchange="setBalDateRange()">
+      <button onclick="clearBalDateRange()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.65rem;padding:3px 5px;">✕ Limpiar</button>
+      <span id="balDateRangeLabel" style="color:var(--cyan);font-family:'DM Mono',monospace;"></span>
     </div>
     <div class="chart-wrap-lg"><canvas id="chartBalance"></canvas></div>
-    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:9px;font-size:0.62rem;color:var(--muted2);">
-      <span>🟢 <span style="color:var(--green);">┊</span> Depósito</span>
-      <span>🔴 <span style="color:var(--red);">┊</span> Retiro</span>
-      <span>🔧 Ajuste: sin línea, tocá el punto para verlo</span>
+    <div style="display:flex;gap:16px;margin-top:8px;font-size:0.65rem;color:var(--muted2);">
+      <span><span style="color:var(--green);">●</span> Depósito</span>
+      <span><span style="color:var(--red);">●</span> Retiro</span>
     </div>
   </div>
   <div class="card" style="margin-bottom:11px;">
@@ -787,10 +856,39 @@ select option{background:var(--s2);}
   <div class="card"><div class="card-title">Notas Guardadas (más nuevas primero)</div><div id="notasList"></div></div>
 </div>
 
+<!-- ===== TAB CONFIGURACIÓN ===== -->
+<div id="tab-config" class="tab-content">
+  <div class="card" style="margin-bottom:11px;">
+    <div class="card-title">💱 Tipo de Cambio</div>
+    <div class="fg">
+      <label>1 US$ (bet365) equivale a <span class="opt">($ pesos uruguayos, 1xbet)</span></label>
+      <input type="number" id="exchangeRateInput" step="1" placeholder="1000" oninput="updateExchangeRate(this.value)">
+    </div>
+    <div style="font-size:0.6rem;color:var(--muted);margin-top:6px;">Se usa para unificar en pesos las stats compartidas de un tipster (WR, Yield, Profit) cuando tiene apuestas en ambas casas. El Balance de cada casa queda siempre en su propia moneda, sin conversión.</div>
+  </div>
+  <div class="card">
+    <div class="card-title">⚙️ Configuración</div>
+    <div style="font-size:0.78rem;color:var(--text);line-height:1.6;">
+      La mayoría de los ajustes de TipsterBook viven donde los usás — por ejemplo, el modo de cálculo de stake, la cuota sugerida, la casa por defecto y el bankroll de cada tipster están en su botón ⚙️ dentro de su tarjeta (pestaña Tipsters). El <b>Stake Default</b> (global, para casos generales) también se configura ahí, en cualquier tipster que uses ese modo.
+    </div>
+    <div style="font-size:0.68rem;color:var(--muted);margin-top:11px;">Próximamente: más ajustes generales de la app van a vivir acá.</div>
+  </div>
+</div>
+
 
 </div><!-- /container -->
 
 <!-- MODAL EDITAR APUESTA -->
+<!-- PICKER: Tipster -->
+<div class="picker-overlay" id="tipsterPickerOverlay" style="display:none;" onclick="if(event.target===this)closeTipsterPicker()">
+  <div class="picker-sheet" id="tipsterPickerList"></div>
+</div>
+
+<!-- PICKER: Deporte (2 niveles) -->
+<div class="picker-overlay" id="deportePickerOverlay" style="display:none;" onclick="if(event.target===this)closeDeportePicker()">
+  <div class="picker-sheet" id="deportePickerList"></div>
+</div>
+
 <div class="modal-overlay" id="editModal" style="display:none;" onclick="if(event.target===this)closeEditModal()">
   <div class="modal-box">
     <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -798,6 +896,11 @@ select option{background:var(--s2);}
       <button class="btn-del btn-sm" onclick="deleteBetFromEditModal()">🗑 Borrar apuesta</button>
     </div>
     <input type="hidden" id="editBetId"><input type="hidden" id="editTipsterId">
+    <div style="display:flex;gap:8px;margin:10px 0;">
+      <div class="casa-btn casa-1xbet" id="ecasa-1xbet" onclick="setEditCasa('1xbet')"><span class="casa-accent">1</span>xbet</div>
+      <div class="casa-btn casa-bet365" id="ecasa-bet365" onclick="setEditCasa('bet365')">bet<span class="casa-accent">365</span></div>
+    </div>
+    <input type="hidden" id="eCasa" value="1xbet">
     <div class="form-grid">
       <div class="fg">
         <label>Descripción <span class="opt">(opcional)</span>
@@ -806,21 +909,14 @@ select option{background:var(--s2);}
         <textarea id="eDesc" rows="1" style="width:100%;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:8px 11px;border-radius:8px;font-family:'DM Mono',monospace;font-size:0.78rem;outline:none;resize:none;overflow:hidden;transition:none;"></textarea>
       </div>
       <div class="fg"><label>Stake</label><input type="number" id="eStake" step="0.5" oninput="recalcEditMontoForJugadaContext()"></div>
-      <div class="fg"><label>Monto ($)</label><input type="number" id="eMonto"></div>
+      <div class="fg"><label id="eMontoLabel">Monto ($)</label><input type="number" id="eMonto"></div>
       <div class="fg"><label>Cuota</label><input type="number" id="eCuota" step="0.01"></div>
       <div class="fg"><label>Nº Eventos</label><input type="number" id="eEventos" min="1"></div>
       <div class="fg"><label>Deporte</label>
-        <select id="eDeporte">
-          <option value="Fútbol Europeo">⚽ Fútbol Europeo</option>
-          <option value="Fútbol Latino">⚽ Fútbol Latino</option>
-          <option value="Fútbol Otro">⚽ Fútbol Otro</option>
-          <option value="Basketball">🏀 Basketball</option>
-          <option value="Tenis">🎾 Tenis</option>
-          <option value="Boxeo">🥊 Boxeo</option>
-          <option value="LoL">🎮 LoL</option>
-          <option value="CS:GO/Valo">🎮 CS:GO/Valo</option>
-          <option value="Otro">🎯 Otro</option>
-        </select>
+        <button type="button" class="picker-trigger" id="eDeporteTrigger" onclick="openDeportePicker('eDeporte')">
+          <span class="picker-trigger-text">⚽ Fútbol Europeo</span><span class="chev">▾</span>
+        </button>
+        <input type="hidden" id="eDeporte" value="Fútbol Europeo">
       </div>
       <div class="fg"><label>Fecha</label><input type="date" id="eFecha"></div>
     </div>
@@ -838,6 +934,8 @@ select option{background:var(--s2);}
         <div class="chip" data-val="Portería 0" onclick="toggleEditChip(this)">🧤 Portería 0</div>
         <div class="chip" data-val="Tarjetas" onclick="toggleEditChip(this)">🟨 Tarjetas</div>
         <div class="chip" data-val="Corners" onclick="toggleEditChip(this)">🚩 Corners</div>
+        <div class="chip" data-val="Tiros al Arco" onclick="toggleEditChip(this)">🥅 Tiros al Arco</div>
+        <div class="chip" data-val="Tiros" onclick="toggleEditChip(this)">👟 Tiros</div>
         <div class="chip" data-val="Individual" onclick="toggleEditChip(this)">👤 Individual</div>
         <div class="chip" data-val="Clasificar" onclick="toggleEditChip(this)">🏅 Clasificar</div>
         <div class="chip" data-val="Doble Oportunidad" onclick="toggleEditChip(this)">🔁 Doble Op.</div>
@@ -960,6 +1058,18 @@ select option{background:var(--s2);}
       </div>
     </div>
 
+    <!-- CASA POR DEFECTO -->
+    <div style="margin-bottom:13px;">
+      <div class="fg" style="margin-bottom:8px;"><label>Casa por defecto <span class="opt">(opcional)</span></label></div>
+      <div style="display:flex;gap:8px;">
+        <div class="flt-btn a-all" id="etCasa-auto" onclick="setETCasaDefault(null)" style="flex:1;text-align:center;cursor:pointer;">🔄 Automático</div>
+        <div class="casa-btn casa-1xbet" id="etCasa-1xbet" onclick="setETCasaDefault('1xbet')"><span class="casa-accent">1</span>xbet</div>
+        <div class="casa-btn casa-bet365" id="etCasa-bet365" onclick="setETCasaDefault('bet365')">bet<span class="casa-accent">365</span></div>
+      </div>
+      <div style="font-size:0.6rem;color:var(--muted);margin-top:6px;">"Automático" preselecciona la casa con más apuestas jugadas de este tipster. Elegí una fija si querés forzarla siempre.</div>
+      <input type="hidden" id="etCasaDefault" value="">
+    </div>
+
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="saveEditTipster()">💾 Guardar</button>
       <button class="btn btn-ghost" onclick="closeEditTipsterModal()">Cancelar</button>
@@ -1055,9 +1165,20 @@ let retoModeOn = false, activeRetoId = null, pendingRetoMode = null;
 let retosFilterTipster = 'all', retosFilterEstado = 'all';
 let graficasSubView = 'apuestas';
 let riskSimTimer = null;
+const CASA_INFO = {
+  '1xbet': { label:'1xbet', symbol:'$', moneda:'UYU', cssClass:'casa-1xbet' },
+  'bet365': { label:'bet365', symbol:'US$', moneda:'USD', cssClass:'casa-bet365' },
+};
+function fmtCasa(amount, casa) {
+  const info = CASA_INFO[casa] || CASA_INFO['1xbet'];
+  const n = amount || 0;
+  return (n >= 0 ? '+' : '-') + info.symbol + Math.abs(n).toFixed(2);
+}
 let balPeriod = 'all';
 let balDateFrom = null, balDateTo = null;
 let balView = 'jugadas';
+let balCasa = '1xbet';
+let curCasa = '1xbet';
 let apFilterResult = 'all', apFilterTipster = 'all', apFilterJugada = 'all';
 const COLORS = ['#6c63ff','#22c55e','#06b6d4','#f59e0b','#e879f9','#ef4444','#f97316','#84cc16','#14b8a6','#a78bfa'];
 const RETO_MODES = {
@@ -1081,6 +1202,7 @@ function initApp() {
   migrateOldTypeLabels();
   ensureNotas();
   data.tipsters.forEach(t => { refreshBankPico(t); maybeRefreshBankPctSnapshot(t); });
+  updateDeportePickerTrigger('bDeporte');
   renderAll();
   setSyncStatus('connecting');
   if (window._fbReady) startFB();
@@ -1116,7 +1238,7 @@ function save() {
 
 function setSyncStatus(s) {
   const el = document.getElementById('syncStatus'); if (!el) return;
-  const m = { connecting:'🔄 Conectando...', syncing:'🔄 Sincronizando...', saving:'💾 Guardando...', ok:'☁️ Sincronizado' };
+  const m = { connecting:'Conectando...', syncing:'Sincronizando...', saving:'Guardando...', ok:'Sincronizado' };
   const c = { connecting:'#6b7694', syncing:'#06b6d4', saving:'#f59e0b', ok:'#22c55e' };
   el.textContent = m[s]; el.style.color = c[s];
 }
@@ -1179,6 +1301,16 @@ function descCell(b, ns) {
     <span class="desc-toggle" onclick="toggleDescExpand('${idKey}')" id="descArrow-${idKey}">▼</span>
   </div></td>`;
 }
+function setEditCasa(casa) {
+  const b1 = document.getElementById('ecasa-1xbet'), b2 = document.getElementById('ecasa-bet365');
+  if (b1) b1.classList.toggle('sel', casa==='1xbet');
+  if (b2) b2.classList.toggle('sel', casa==='bet365');
+  const el = document.getElementById('eCasa'); if (el) el.value = casa;
+  const lbl = document.getElementById('eMontoLabel');
+  if (lbl) lbl.textContent = 'Monto (' + CASA_INFO[casa].symbol + ')';
+  const montoInput = document.getElementById('eMonto');
+  if (montoInput) montoInput.classList.toggle('usd-amount', casa==='bet365');
+}
 function toggleEditDescExpand() {
   const el = document.getElementById('eDesc');
   const arrow = document.getElementById('eDescArrow');
@@ -1195,13 +1327,29 @@ function toggleDescExpand(idKey) {
   const isExp = el.classList.toggle('expanded');
   if (arrow) arrow.textContent = isExp ? '▲' : '▼';
 }
-function calcStats(bets, filter = 'all') {
+function ensureExchangeRate() {
+  if (!data.exchangeRate || data.exchangeRate <= 0) data.exchangeRate = 1000;
+}
+function updateExchangeRate(val) {
+  const n = parseFloat(val);
+  if (!n || n <= 0) return;
+  data.exchangeRate = n;
+  save();
+  renderAll();
+}
+function toPesos(amount, casa) {
+  if (casa === 'bet365') { ensureExchangeRate(); return amount * data.exchangeRate; }
+  return amount;
+}
+function calcStats(bets, filter = 'all', raw = false) {
   const fb = filter==='all' ? bets : bets.filter(b => filter==='played' ? b.played : !b.played);
   const closed = fb.filter(b => b.result !== 'pending');
   const won = closed.filter(b => b.result === 'win');
   const notVoid = closed.filter(b => b.result !== 'void');
-  const invested = closed.reduce((s,b) => s + (b.monto||0), 0);
-  const profit  = closed.reduce((s,b) => s + calcProfit(b), 0);
+  // Las apuestas de bet365 (USD) se convierten a pesos acá para que las stats agregadas queden unificadas,
+  // salvo que raw=true (vistas ya filtradas a una sola casa, donde no corresponde convertir).
+  const invested = closed.reduce((s,b) => s + (raw ? (b.monto||0) : toPesos(b.monto||0, b.casa)), 0);
+  const profit  = closed.reduce((s,b) => s + (raw ? calcProfit(b) : toPesos(calcProfit(b), b.casa)), 0);
   const yield_  = invested > 0 ? profit / invested * 100 : 0;
   const wr      = notVoid.length > 0 ? won.length / notVoid.length * 100 : 0;
   const ws = closed.filter(b => b.stake);
@@ -1270,6 +1418,152 @@ const SPORT_MAP = {
   'Baseball': 'Otro',
 };
 function normalizeSport(s) { return SPORT_MAP[s] || s; }
+
+const DEPORTE_L1 = [
+  {key:'Fútbol Europeo', emoji:'⚽', label:'Fútbol Europeo', sub:'europeo'},
+  {key:'Fútbol América', emoji:'⚽', label:'Fútbol América', sub:'america'},
+  {key:'Fútbol Otro', emoji:'⚽', label:'Fútbol Otro', sub:'otro'},
+  {key:'Basketball', emoji:'🏀', label:'Basketball'},
+  {key:'Tenis', emoji:'🎾', label:'Tenis'},
+  {key:'Boxeo', emoji:'🥊', label:'Boxeo'},
+  {key:'LoL', emoji:'🎮', label:'LoL'},
+  {key:'CS:GO/Valo', emoji:'🎮', label:'CS:GO/Valo'},
+  {key:'Otro', emoji:'🎯', label:'Otro'},
+];
+const DEPORTE_SUB = {
+  europeo: [
+    {emoji:'🇮🇹', label:'Italia'},
+    {emoji:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', label:'Inglaterra'},
+    {emoji:'🇪🇸', label:'España'},
+    {emoji:'🇵🇹', label:'Portugal'},
+    {emoji:'🇫🇷', label:'Francia'},
+    {emoji:'🇸🇪', label:'Suecia'},
+    {emoji:'🇳🇴', label:'Noruega'},
+    {emoji:'🇩🇰', label:'Dinamarca'},
+    {emoji:'🇫🇮', label:'Finlandia'},
+    {emoji:'🇮🇸', label:'Islandia'},
+  ],
+  america: [
+    {emoji:'🇺🇾', label:'Uruguay'},
+    {emoji:'🇦🇷', label:'Argentina'},
+    {emoji:'🇧🇷', label:'Brasil'},
+    {emoji:'🇨🇱🇨🇴🇻🇪🇵🇪🇵🇾🇧🇴', label:'Chile/Colombia/Venezuela/Perú/Paraguay/Bolivia'},
+    {emoji:'🇺🇸🇨🇦', label:'Estados Unidos/Canadá'},
+    {emoji:'🇲🇽', label:'México'},
+    {emoji:'🌎', label:'Centroamérica'},
+    {emoji:'🏆', label:'Conmebol'},
+  ],
+  otro: [
+    {emoji:'🇸🇦', label:'Arabia'},
+    {emoji:'🇦🇪🇶🇦🇮🇱', label:'Emirates/Qatar/Israel'},
+    {emoji:'🇯🇵', label:'Japón'},
+    {emoji:'🇨🇳', label:'China'},
+    {emoji:'🇦🇺', label:'Australia'},
+    {emoji:'🇰🇷', label:'Corea'},
+    {emoji:'🌍', label:'Selecciones África'},
+    {emoji:'🌏', label:'Selecciones Asia'},
+    {emoji:'🎯', label:'Otro'},
+  ]
+};
+let deportePickerTarget = 'bDeporte';
+
+// ============================================================
+// PICKER: TIPSTER (bottom sheet compacto, reemplaza el <select>)
+// ============================================================
+function openTipsterPicker(targetId) {
+  const list = document.getElementById('tipsterPickerList'); if (!list) return;
+  const sel = document.getElementById(targetId);
+  const cur = sel ? sel.value : '';
+  const activos = data.tipsters.filter(t => !t.archivado && !t.desactivado);
+  if (!activos.length) {
+    list.innerHTML = '<div class="picker-row" style="color:var(--muted);">Sin tipsters disponibles.</div>';
+  } else {
+    list.innerHTML = activos.map(t => {
+      const i = data.tipsters.indexOf(t);
+      const col = COLORS[i % COLORS.length];
+      const isSel = String(t.id) === String(cur);
+      return `<div class="picker-row" onclick="selectTipsterFromPicker('${targetId}',${t.id})">
+        <div class="picker-row-left"><span class="picker-dot" style="background:${col}"></span><span class="picker-name">${t.name}</span></div>
+        <span class="picker-radio${isSel?' sel':''}"></span>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('tipsterPickerOverlay').style.display = 'flex';
+}
+function closeTipsterPicker() { document.getElementById('tipsterPickerOverlay').style.display = 'none'; }
+function selectTipsterFromPicker(targetId, id) {
+  const sel = document.getElementById(targetId);
+  if (sel) { sel.value = id; sel.dispatchEvent(new Event('change')); }
+  updateTipsterPickerTrigger(targetId);
+  closeTipsterPicker();
+}
+function updateTipsterPickerTrigger(targetId) {
+  const sel = document.getElementById(targetId);
+  const t = sel && sel.value ? data.tipsters.find(x => String(x.id) === String(sel.value)) : null;
+  const trigId = targetId === 'bDeporte' ? null : (targetId + 'Trigger');
+  const btn = document.getElementById((targetId==='bTipster'?'bTipsterTrigger':targetId+'Trigger'));
+  if (btn) { const txt = btn.querySelector('.picker-trigger-text'); if (txt) txt.textContent = t ? t.name : '— Seleccionar tipster —'; }
+}
+
+// ============================================================
+// PICKER: DEPORTE (2 niveles: categoría → país, para las 3 de Fútbol)
+// ============================================================
+function openDeportePicker(targetId) {
+  deportePickerTarget = targetId;
+  renderDeportePickerL1();
+  document.getElementById('deportePickerOverlay').style.display = 'flex';
+}
+function closeDeportePicker() { document.getElementById('deportePickerOverlay').style.display = 'none'; }
+function renderDeportePickerL1() {
+  const list = document.getElementById('deportePickerList'); if (!list) return;
+  const cur = document.getElementById(deportePickerTarget)?.value || '';
+  list.innerHTML = DEPORTE_L1.map(d => {
+    const isSel = cur === d.key;
+    return `<div class="picker-row" onclick="${d.sub ? `openDeporteSubmenu('${d.sub}','${d.key.replace(/'/g,"\\'")}')` : `selectDeporteFinal('${d.key.replace(/'/g,"\\'")}')`}">
+      <div class="picker-row-left"><span class="picker-name">${d.emoji} ${d.label}</span></div>
+      ${d.sub ? '<span class="picker-arrow">›</span>' : `<span class="picker-radio${isSel?' sel':''}"></span>`}
+    </div>`;
+  }).join('');
+}
+function openDeporteSubmenu(subKey, catKey) {
+  const list = document.getElementById('deportePickerList'); if (!list) return;
+  const items = DEPORTE_SUB[subKey] || [];
+  const cur = document.getElementById(deportePickerTarget)?.value || '';
+  list.innerHTML = `<div class="picker-row picker-back" onclick="renderDeportePickerL1()">‹ Volver</div>` +
+    items.map(item => {
+      const finalVal = catKey + ' - ' + item.label;
+      const isSel = cur === finalVal;
+      return `<div class="picker-row" onclick="selectDeporteFinal('${finalVal.replace(/'/g,"\\'")}')">
+        <div class="picker-row-left"><span class="picker-name">${item.emoji} ${item.label}</span></div>
+        <span class="picker-radio${isSel?' sel':''}"></span>
+      </div>`;
+    }).join('');
+}
+function selectDeporteFinal(val) {
+  const target = document.getElementById(deportePickerTarget);
+  if (target) target.value = val;
+  updateDeportePickerTrigger(deportePickerTarget);
+  closeDeportePicker();
+  if (deportePickerTarget === 'bDeporte') { updatePreview(); updateRiskPanel(); }
+}
+function updateDeportePickerTrigger(targetId) {
+  const val = document.getElementById(targetId)?.value || '';
+  const btn = document.getElementById(targetId + 'Trigger');
+  if (!btn) return;
+  const txt = btn.querySelector('.picker-trigger-text');
+  if (!txt) return;
+  if (!val) { txt.textContent = '— Seleccionar deporte —'; return; }
+  // Buscamos el emoji correspondiente para mostrarlo en el botón (categoría simple o categoría - país)
+  if (val.includes(' - ')) {
+    const [catKey, countryLabel] = val.split(' - ');
+    const cat = DEPORTE_L1.find(d => d.key === catKey);
+    const sub = cat && cat.sub ? (DEPORTE_SUB[cat.sub] || []).find(i => i.label === countryLabel) : null;
+    txt.textContent = sub ? `${cat.emoji} ${catKey} · ${sub.emoji} ${countryLabel}` : val;
+  } else {
+    const cat = DEPORTE_L1.find(d => d.key === val);
+    txt.textContent = cat ? `${cat.emoji} ${cat.label}` : val;
+  }
+}
 
 function mostUsedSport(bets) {
   const sports = bets.map(b => normalizeSport(b.deporte)).filter(Boolean);
@@ -1453,19 +1747,61 @@ function showConfirm(msg, onYes) {
 // ============================================================
 // TABS
 // ============================================================
+function toggleMoreMenu() {
+  const ov = document.getElementById('moreMenuOverlay');
+  ov.style.display = ov.style.display === 'flex' ? 'none' : 'flex';
+}
+function closeMoreMenu() { document.getElementById('moreMenuOverlay').style.display = 'none'; }
+
+let analisisLastView = 'graficas';
+const TAB_GROUP = { tipsters:'tipsters', apuestas:'apuestas', graficas:'analisis', balance:'analisis', unidades:'analisis' };
+function toggleAnalisisRiesgo() {
+  const content = document.getElementById('analisisRiesgoContent');
+  const chev = document.getElementById('analisisRiesgoChev');
+  if (!content) return;
+  const open = content.style.display !== 'none';
+  content.style.display = open ? 'none' : 'block';
+  if (chev) chev.textContent = open ? '▸' : '▾';
+}
 function switchTab(id) {
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.tab:not(.subtab)').forEach(t=>t.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
-  ['tipsters','nueva','unidades','graficas','balance','apuestas','notas'].forEach((x,i)=>{ if(x===id) document.querySelectorAll('.tab:not(.subtab)')[i]?.classList.add('active'); });
+  const group = TAB_GROUP[id];
+  if (group) { const btn = document.querySelector('.tab[data-group="'+group+'"]'); if (btn) btn.classList.add('active'); }
+  if (['graficas','balance','unidades'].includes(id)) { analisisLastView = id; updateVistaTrigger(id); }
   if (id==='graficas') { updateChartTipsterFilter(); setGraficasSubView(graficasSubView); }
   if (id==='unidades') { updateUnitTipsterFilter(); renderUnidades(); }
   if (id==='nueva') { renderRetoInfoPanel(); updateRiskPanel(); updateGlobalExpoPanel(); }
   if (id==='balance') { renderBalanceTab(); }
   if (id==='apuestas') { updateApuestasTipsterFilter(); renderApuestasList(); }
   if (id==='notas') { renderNotas(); }
+  if (id==='config') { ensureExchangeRate(); const el = document.getElementById('exchangeRateInput'); if (el) el.value = data.exchangeRate; }
+  closeMoreMenu();
 }
-
+function openAnalisis() { switchTab(analisisLastView); }
+function openVistaPicker() {
+  const list = document.getElementById('vistaPickerList'); if (!list) return;
+  const opts = [
+    {view:'balance', emoji:'💰', label:'Balance'},
+    {view:'unidades', emoji:'📐', label:'Unidades'},
+    {view:'graficas', emoji:'📈', label:'Gráficas (Apuestas / Retos / Soñadoras)'},
+  ];
+  list.innerHTML = opts.map(o => `<div class="picker-row" onclick="selectVista('${o.view}',null)">
+    <div class="picker-row-left"><span class="picker-name">${o.emoji} ${o.label}</span></div>
+  </div>`).join('');
+  document.getElementById('vistaPickerOverlay').style.display = 'flex';
+}
+function closeVistaPicker() { document.getElementById('vistaPickerOverlay').style.display = 'none'; }
+function selectVista(view, sub) {
+  closeVistaPicker();
+  switchTab(view);
+  if (view === 'graficas' && sub) setGraficasSubView(sub);
+}
+function updateVistaTrigger(id) {
+  const labels = { balance:'💰 Balance', unidades:'📐 Unidades', graficas: (graficasSubView==='retos'?'🎯 Retos':graficasSubView==='sonadoras'?'🌙 Soñadoras':'📈 Gráficas') };
+  document.querySelectorAll('.vista-trigger-text').forEach(el => { el.textContent = labels[id] || 'Vista'; });
+}
 // ============================================================
 // TIPSTERS
 // ============================================================
@@ -1628,7 +1964,7 @@ function renderTipsterBody(t, s, sk, ratio, roi, color) {
       ${descCell(b, 'tp')}
       <td><div class="types-tags">${(b.types||[]).map(tp=>`<span class="type-tag">${tp}</span>`).join('')}</div></td>
       <td style="font-family:'DM Mono',monospace;">${b.stake?b.stake+'u':'—'}</td>
-      <td>$${(b.monto||0).toFixed(0)}</td>
+      <td class="${(b.casa==='bet365')?'usd-amount':''}">${CASA_INFO[b.casa||'1xbet'].symbol}${(b.monto||0).toFixed(0)}</td>
       <td>${(b.cuota||0).toFixed(2)}</td>
       <td><span class="badge ${b.played?'badge-played':'badge-skipped'}">${b.played?'✅':'👁'}</span></td>
       <td style="display:flex;gap:3px;">
@@ -1703,12 +2039,12 @@ function renderBetsTable(t, sortKey) {
       ${descCell(b, 'tb')}
       <td><div class="types-tags">${(b.types||[]).map(tp=>`<span class="type-tag">${tp}</span>`).join('')}</div></td>
       <td style="font-family:'DM Mono',monospace;">${b.stake?b.stake+'u':'—'}</td>
-      <td>$${(b.monto||0).toFixed(0)}</td>
+      <td class="${(b.casa==='bet365')?'usd-amount':''}">${CASA_INFO[b.casa||'1xbet'].symbol}${(b.monto||0).toFixed(0)}</td>
       <td>${(b.cuota||0).toFixed(2)}</td>
       <td>${b.eventos||1}</td>
       <td><span class="badge ${b.played?'badge-played':'badge-skipped'}">${b.played?'✅':'👁'}</span></td>
       <td><span class="badge badge-${b.result}">${resLabel(b.result)}</span></td>
-      <td class="${p>=0?'green':'red'}" style="font-family:'DM Mono',monospace;">${b.result!=='pending'?fmt(p):'—'}</td>
+      <td class="${(p>=0?'green':'red')+((b.casa==='bet365')?' usd-amount':'')}" style="font-family:'DM Mono',monospace;">${b.result!=='pending'?fmtCasa(p,b.casa||'1xbet'):'—'}</td>
       <td class="${u!==null?(u>=0?'cyan':'red'):''}" style="font-family:'DM Mono',monospace;">${u!==null&&b.result!=='pending'?fmtU(u):'—'}</td>
       <td style="display:flex;gap:3px;">
         <button class="btn-edit" onclick="openEditModal(${t.id},${b.id})">✏️</button>
@@ -1845,6 +2181,7 @@ function openEditTipsterModal(id) {
   const defStakeEl = document.getElementById('etDefaultStake'), defMontoEl = document.getElementById('etDefaultMonto');
   if (defStakeEl) defStakeEl.value = data.globalStakeDefault.stake;
   if (defMontoEl) defMontoEl.value = data.globalStakeDefault.monto;
+  setETCasaDefault(t.casaDefault || null);
   document.getElementById('editTipsterModal').style.display = 'flex';
 }
 function toggleETAutoCuota() {
@@ -1858,6 +2195,15 @@ function toggleETForceCuotaSugerida() {
   const on = btn.classList.contains('on');
   btn.className = 'auto-badge' + (on ? '' : ' on');
   btn.textContent = on ? '🔒 Usar siempre el promedio histórico' : '🔒 Usar siempre la cuota sugerida';
+}
+function setETCasaDefault(casa) {
+  document.getElementById('etCasaDefault').value = casa || '';
+  ['auto','1xbet','bet365'].forEach(c => {
+    const el = document.getElementById('etCasa-'+c);
+    if (!el) return;
+    if ((casa===null && c==='auto') || casa===c) el.style.opacity = '1';
+    else el.style.opacity = c==='auto' ? '.6' : '.45';
+  });
 }
 function closeEditTipsterModal() { document.getElementById('editTipsterModal').style.display = 'none'; }
 function toggleETAutoStake() {}
@@ -1900,6 +2246,7 @@ function saveEditTipster() {
   t.cuotaMediaSugerida = cmVal !== '' ? (parseFloat(cmVal) || null) : null;
   const fcsBtn = document.getElementById('etForceCuotaSugerida');
   t.forceCuotaSugerida = fcsBtn ? fcsBtn.classList.contains('on') : false;
+  t.casaDefault = document.getElementById('etCasaDefault').value || null;
   refreshBankPico(t);
   save(); renderAll(); closeEditTipsterModal(); showToast('✅ Tipster actualizado');
 }
@@ -1952,12 +2299,8 @@ function prefillFromTipster(t) {
   if (sport) {
     const sel = document.getElementById('bDeporte');
     if (sel) {
-      const opts = [...sel.options].map(o => o.value);
-      if (opts.includes(sport)) sel.value = sport;
-      else {
-        const norm = normalizeSport(sport);
-        if (opts.includes(norm)) sel.value = norm;
-      }
+      sel.value = normalizeSport(sport);
+      updateDeportePickerTrigger('bDeporte');
     }
   }
   document.querySelectorAll('#betTypeChips .chip').forEach(c => c.classList.remove('selected'));
@@ -1990,6 +2333,17 @@ function onTipsterChange() {
   document.getElementById('bPreview').style.display = 'none';
   const t = getSelectedTipster();
   if (t) maybeRefreshBankPctSnapshot(t);
+  // Auto-selecciona la Casa (1xbet/bet365): prioridad al valor manual configurado en el tipster,
+  // si no, según cuál casa tenga más apuestas jugadas con ese tipster. Default: 1xbet.
+  if (t) {
+    if (t.casaDefault) setCurCasa(t.casaDefault);
+    else {
+      const relevantBets = statsBets(t.bets).filter(b => b.played);
+      const c1x = relevantBets.filter(b => (b.casa||'1xbet') === '1xbet').length;
+      const c365 = relevantBets.filter(b => b.casa === 'bet365').length;
+      setCurCasa(c365 > c1x ? 'bet365' : '1xbet');
+    }
+  }
   // Auto-selecciona Jugada / No Jugada según la tendencia histórica del tipster.
   // Excluye apuestas de Reto (siempre quedan "jugada" a la fuerza, no reflejan tu preferencia real).
   // Si hay empate (o todavía no tiene apuestas), se deja sin seleccionar.
@@ -2003,6 +2357,20 @@ function onTipsterChange() {
   prefillFromTipster(t);
   updateRiskPanel();
   updateBankBlockWarning();
+  updateGlobalExpoPanel();
+}
+
+function setCurCasa(casa) {
+  curCasa = casa;
+  const b1 = document.getElementById('curcasa-1xbet'), b2 = document.getElementById('curcasa-bet365');
+  if (b1) b1.classList.toggle('sel', casa==='1xbet');
+  if (b2) b2.classList.toggle('sel', casa==='bet365');
+  const bCasaEl = document.getElementById('bCasa'); if (bCasaEl) bCasaEl.value = casa;
+  const lbl = document.getElementById('bMontoLabel');
+  if (lbl) lbl.textContent = 'Dinero (' + CASA_INFO[casa].symbol + ')';
+  const montoInput = document.getElementById('bMonto');
+  if (montoInput) montoInput.classList.toggle('usd-amount', casa==='bet365');
+  updatePreview();
   updateGlobalExpoPanel();
 }
 
@@ -2185,12 +2553,16 @@ function updatePreview() {
   const c = parseFloat(document.getElementById('bCuota').value);
   const st = parseFloat(document.getElementById('bStake').value);
   const box = document.getElementById('bPreview');
+  const casa = document.getElementById('bCasa')?.value || '1xbet';
+  const sym = CASA_INFO[casa].symbol;
+  const usdCls = casa==='bet365' ? ' usd-amount' : '';
   if (m > 0 && c > 0) {
     box.style.display = 'block';
-    document.getElementById('prev-monto').textContent = '$' + m.toFixed(2);
-    document.getElementById('prev-retorno').textContent = '$' + (m*c).toFixed(2);
-    document.getElementById('prev-profit').textContent = '+$' + (m*c-m).toFixed(2);
-    document.getElementById('prev-loss').textContent = '-$' + m.toFixed(2);
+    const setC = (id,txt) => { const el=document.getElementById(id); el.textContent=txt; el.className = (el.className.replace(/\s*usd-amount/g,''))+usdCls; };
+    setC('prev-monto', sym + m.toFixed(2));
+    setC('prev-retorno', sym + (m*c).toFixed(2));
+    setC('prev-profit', '+' + sym + (m*c-m).toFixed(2));
+    setC('prev-loss', '-' + sym + m.toFixed(2));
     const ur = document.getElementById('prev-units-row');
     if (st > 0 && c > 1) {
       ur.style.display='flex'; ur.style.justifyContent='space-between';
@@ -2203,33 +2575,42 @@ function updatePreview() {
 // ============================================================
 // CALCULADORA DE RIESGO EN VIVO
 // ============================================================
-function getGlobalEnJuego() {
-  return data.tipsters.reduce((s,t) => s + t.bets.filter(b => b.played && b.result==='pending').reduce((s2,b) => s2+(b.monto||0), 0), 0);
+function getGlobalEnJuego(casa) {
+  return data.tipsters.reduce((s,t) => s + t.bets.filter(b => b.played && b.result==='pending' && (b.casa||'1xbet')===casa).reduce((s2,b) => s2+(b.monto||0), 0), 0);
 }
-function getGlobalBalanceActual() {
+function getGlobalBalanceActual(casa) {
   ensureBalanceData();
-  const inicial = data.balanceAdj.inicial || 0;
-  const totalIng = data.balanceMovs.filter(m => m.tipo==='ingreso').reduce((s,m) => s+m.monto, 0);
-  const totalRet = data.balanceMovs.filter(m => m.tipo==='retiro').reduce((s,m) => s+m.monto, 0);
-  const totalAjuste = data.balanceMovs.filter(m => m.tipo==='ajuste').reduce((s,m) => s+m.monto, 0);
+  const inicial = data.balanceAdj[casa].inicial || 0;
+  const movsCasa = data.balanceMovs.filter(m => m.casa === casa);
+  const totalIng = movsCasa.filter(m => m.tipo==='ingreso').reduce((s,m) => s+m.monto, 0);
+  const totalRet = movsCasa.filter(m => m.tipo==='retiro').reduce((s,m) => s+m.monto, 0);
+  const totalAjuste = movsCasa.filter(m => m.tipo==='ajuste').reduce((s,m) => s+m.monto, 0);
   // El balance SÍ incluye Soñadoras/Retos (a propósito, ver statsBets), por eso usamos t.bets directo.
   // Los tipsters desactivados NO suman al balance (a diferencia de los archivados, que sí siguen sumando).
+  // 1xbet y bet365 son cuentas totalmente separadas: sin conversión, cada una en su propia moneda.
   let profitTotal = 0;
-  data.tipsters.filter(t => !t.desactivado).forEach(t => { profitTotal += calcStats(t.bets, 'played').profit; });
+  data.tipsters.filter(t => !t.desactivado).forEach(t => {
+    const betsCasa = t.bets.filter(b => (b.casa||'1xbet') === casa);
+    profitTotal += calcStats(betsCasa, 'played', true).profit;
+  });
   return inicial + totalIng - totalRet + totalAjuste + profitTotal;
 }
 function updateGlobalExpoPanel() {
   const panel = document.getElementById('globalExpoPanel'); if (!panel) return;
-  const enJuego = getGlobalEnJuego();
+  const casa = curCasa || '1xbet';
+  const sym = CASA_INFO[casa].symbol;
+  const enJuego = getGlobalEnJuego(casa);
   const estaApuesta = (curJugada === false) ? 0 : (parseFloat(document.getElementById('bMonto')?.value) || 0);
-  const balance = getGlobalBalanceActual();
+  const balance = getGlobalBalanceActual(casa);
   const disponible = balance - enJuego - estaApuesta;
   const pct = balance > 0 ? ((enJuego + estaApuesta) / balance * 100) : 0;
-  const se = (id,txt,cls) => { const e=document.getElementById(id); if(e){ e.textContent=txt; if(cls) e.className = (id==='ge-disponible'?'pbox-val-lg ':'pbox-val ')+cls; } };
-  se('ge-enjuego', '$'+enJuego.toFixed(2), enJuego>0?'gold':'');
-  se('ge-estaapuesta', (estaApuesta>0?'+$'+estaApuesta.toFixed(2):'$0'), '');
-  se('ge-balance', '$'+balance.toFixed(2), balance>=0?'cyan':'red');
-  se('ge-disponible', fmt(disponible), disponible>=0?'green':'red');
+  const usdCls = casa==='bet365' ? ' usd-amount' : '';
+  const se = (id,txt,cls) => { const e=document.getElementById(id); if(e){ e.textContent=txt; if(cls) e.className = (id==='ge-disponible'?'pbox-val-lg ':'pbox-val ')+cls+usdCls; } };
+  const title = document.getElementById('globalExpoTitle'); if (title) title.textContent = '🌐 Exposición '+CASA_INFO[casa].label+' (todos los tipsters)';
+  se('ge-enjuego', sym+enJuego.toFixed(2), enJuego>0?'gold':'');
+  se('ge-estaapuesta', (estaApuesta>0?'+'+sym+estaApuesta.toFixed(2):sym+'0'), '');
+  se('ge-balance', sym+balance.toFixed(2), balance>=0?'cyan':'red');
+  se('ge-disponible', fmtCasa(disponible,casa), disponible>=0?'green':'red');
   se('ge-pct', pct.toFixed(1)+'%', pct<=50?'green':pct<=80?'gold':'red');
 }
 function updateRiskPanel() {
@@ -2666,6 +3047,7 @@ function setGraficasSubView(view) {
   if (view === 'apuestas') { updateChartTipsterFilter(); renderCharts(); }
   else if (view === 'retos') { renderGraficasRetos(); updateRetosTipsterFilter(); renderRetos(); }
   else if (view === 'sonadoras') renderGraficasSonadoras();
+  updateVistaTrigger('graficas');
 }
 
 function getArchivedRetos() {
@@ -2923,6 +3305,7 @@ function saveBet() {
     monto, cuota,
     eventos: parseInt(document.getElementById('bEventos').value)||1,
     deporte: document.getElementById('bDeporte').value,
+    casa: document.getElementById('bCasa').value || '1xbet',
     fecha: document.getElementById('bFecha').value,
     types: getChips('betTypeChips'),
     played: curJugada,
@@ -2950,11 +3333,13 @@ function saveBet() {
 
   document.getElementById('bDesc').value='';
   document.getElementById('bEventos').value='1';
-  curResult='pending'; curJugada=null; betException=false; betCuotaException=false; curSonadora=false;
+  curResult='pending'; betException=false; betCuotaException=false; curSonadora=false;
   updateSonadoraBadgeUI();
   ['win','loss','void','pending'].forEach(x=>document.getElementById('rt-'+x).className='rt-btn');
-  document.getElementById('jt-played').className='jt-btn';
-  document.getElementById('jt-skipped').className='jt-btn';
+  // curJugada NO se resetea: si veías registrando "Jugada" (o "No Jugada") seguido para el mismo
+  // tipster, se mantiene esa elección en vez de forzarte a tocarla de nuevo en cada apuesta.
+  document.getElementById('jt-played').className='jt-btn'+(curJugada===true?' played':'');
+  document.getElementById('jt-skipped').className='jt-btn'+(curJugada===false?' skipped':'');
   updateExceptionRow();
   const sb=document.getElementById('autoStakeBadge');if(sb){sb.className='auto-badge on';sb.textContent='🔗 Auto';}
   const cb2=document.getElementById('autoCuotaBadge');if(cb2){cb2.className='auto-badge on';cb2.textContent='📐 Auto';}
@@ -2988,6 +3373,7 @@ function clearForm() {
   document.getElementById('autoCuotaBadge').textContent='📐 Auto';
   betCuotaException = false;
   updateExceptionRow();
+  setCurCasa('1xbet');
   if (retoModeOn && activeRetoId) applyRetoStakeToForm();
   updateRiskPanel();
 }
@@ -3018,6 +3404,7 @@ function openEditModal(tid, bid) {
   const b=t.bets.find(b=>b.id===bid); if(!b) return;
   document.getElementById('editBetId').value=bid;
   document.getElementById('editTipsterId').value=tid;
+  setEditCasa(b.casa || '1xbet');
   document.getElementById('eDesc').value=b.desc||'';
   document.getElementById('eDesc').rows=1;
   document.getElementById('eDesc').style.overflow='hidden';
@@ -3029,9 +3416,8 @@ function openEditModal(tid, bid) {
   document.getElementById('eFecha').value=b.fecha||'';
   const eDepSel = document.getElementById('eDeporte');
   if (eDepSel) {
-    const norm = normalizeSport(b.deporte);
-    const opts = [...eDepSel.options].map(o=>o.value);
-    eDepSel.value = opts.includes(b.deporte) ? b.deporte : (opts.includes(norm) ? norm : 'Fútbol Europeo');
+    eDepSel.value = b.deporte ? normalizeSport(b.deporte) : 'Fútbol Europeo';
+    updateDeportePickerTrigger('eDeporte');
   }
   document.querySelectorAll('#editBetTypeChips .chip').forEach(c=>c.classList.toggle('selected',(b.types||[]).includes(c.dataset.val)));
   editJugada=b.played; setEditJugada(b.played);
@@ -3094,6 +3480,7 @@ function saveEditBet() {
   b.fecha=document.getElementById('eFecha').value;
   const eDepSel2 = document.getElementById('eDeporte');
   if (eDepSel2) b.deporte = eDepSel2.value;
+  b.casa = document.getElementById('eCasa').value || '1xbet';
   b.types=getChips('editBetTypeChips');
   b.played=editJugada; b.result=editResult;
   b.esSonadora=editSonadora;
@@ -3147,6 +3534,7 @@ function renderTipsterChart() {
 function updateTipsterSelect() {
   const sel=document.getElementById('bTipster'),cur=sel.value;
   sel.innerHTML='<option value="">— Seleccionar —</option>'+data.tipsters.filter(t=>!t.archivado&&!t.desactivado).map(t=>`<option value="${t.id}"${t.id==cur?' selected':''}>${t.name}</option>`).join('');
+  updateTipsterPickerTrigger('bTipster');
 }
 function updateGlobalStats() {
   let inv=0,prof=0,won=0,closed=0,total=0,played=0;
@@ -3249,36 +3637,41 @@ function renderNotas() {
 function ensureBalanceData() {
   if (!data.balanceMovs) data.balanceMovs = [];
   if (!data.balanceAdj) data.balanceAdj = {};
-  if (typeof data.balanceAdj.inicial !== 'number') {
-    // Migración: si venía de la versión anterior (ingresado/retirado sueltos), los convierte en movimientos
-    let seed = 0;
-    if (data.balanceAdj.ingresado || data.balanceAdj.retirado) {
-      if (data.balanceAdj.ingresado) data.balanceMovs.push({ id: Date.now(), tipo:'ingreso', monto: data.balanceAdj.ingresado, fecha: new Date().toISOString().split('T')[0], nota:'Migración automática' });
-      if (data.balanceAdj.retirado) data.balanceMovs.push({ id: Date.now()+1, tipo:'retiro', monto: data.balanceAdj.retirado, fecha: new Date().toISOString().split('T')[0], nota:'Migración automática' });
-    } else {
-      seed = getBaselineTotal();
-    }
-    data.balanceAdj.inicial = seed;
+  // Migración vieja: ingresado/retirado sueltos -> inicial plano (versión intermedia)
+  if (typeof data.balanceAdj.inicial !== 'number' && (data.balanceAdj.ingresado || data.balanceAdj.retirado)) {
+    if (data.balanceAdj.ingresado) data.balanceMovs.push({ id: Date.now(), tipo:'ingreso', monto: data.balanceAdj.ingresado, fecha: new Date().toISOString().split('T')[0], nota:'Migración automática' });
+    if (data.balanceAdj.retirado) data.balanceMovs.push({ id: Date.now()+1, tipo:'retiro', monto: data.balanceAdj.retirado, fecha: new Date().toISOString().split('T')[0], nota:'Migración automática' });
+    data.balanceAdj.inicial = getBaselineTotal();
     delete data.balanceAdj.ingresado;
     delete data.balanceAdj.retirado;
   }
+  // Migración: inicial plano (una sola cuenta) -> estructura por casa (1xbet $ / bet365 US$, totalmente separadas)
+  if (typeof data.balanceAdj.inicial === 'number') {
+    const oldInicial = data.balanceAdj.inicial;
+    data.balanceAdj = { '1xbet': { inicial: oldInicial }, 'bet365': { inicial: 0 } };
+  }
+  if (!data.balanceAdj['1xbet']) data.balanceAdj['1xbet'] = { inicial: 0 };
+  if (!data.balanceAdj['bet365']) data.balanceAdj['bet365'] = { inicial: 0 };
+  data.balanceMovs.forEach(m => { if (!m.casa) m.casa = '1xbet'; });
+  ensureExchangeRate();
 }
 function computeBalanceSeries(view) {
   ensureBalanceData();
-  const inicial = data.balanceAdj.inicial || 0;
+  const inicial = data.balanceAdj[balCasa].inicial || 0;
   const wantPlayed = view === 'jugadas';
 
   // Un solo punto por fecha: se agrupan las apuestas Y los movimientos (ingreso/retiro/ajuste)
   // de ese mismo día en un único punto. El detalle de qué pasó ese día se ve en el tooltip.
+  // Todo filtrado a la casa seleccionada (1xbet y bet365 son cuentas totalmente separadas).
   const deltaByDate = {};
   const movsByDate = {};
 
   data.tipsters
-    .flatMap(t => t.bets.filter(b => b.played === wantPlayed && b.result !== 'pending' && b.fecha))
+    .flatMap(t => t.bets.filter(b => b.played === wantPlayed && b.result !== 'pending' && b.fecha && (b.casa||'1xbet') === balCasa))
     .forEach(b => { deltaByDate[b.fecha] = (deltaByDate[b.fecha]||0) + calcProfit(b); });
 
   if (wantPlayed) {
-    data.balanceMovs.forEach(m => {
+    data.balanceMovs.filter(m => m.casa === balCasa).forEach(m => {
       const delta = m.tipo==='ingreso' ? m.monto : m.tipo==='retiro' ? -m.monto : m.monto; // ajuste: monto ya viene con su signo
       deltaByDate[m.fecha] = (deltaByDate[m.fecha]||0) + delta;
       if (!movsByDate[m.fecha]) movsByDate[m.fecha] = [];
@@ -3330,10 +3723,14 @@ function setBalanceView(v) {
   if (nb) nb.className = 'flt-btn' + (v==='noJugadas' ? ' a-skipped' : '');
   renderBalanceTab();
 }
+function setBalCasa(casa) {
+  balCasa = casa;
+  renderBalanceTab();
+}
 function updateBalanceInicial(val) {
   ensureBalanceData();
   const n = parseFloat(val);
-  data.balanceAdj.inicial = isNaN(n) ? 0 : n;
+  data.balanceAdj[balCasa].inicial = isNaN(n) ? 0 : n;
   save();
   renderBalanceTab();
 }
@@ -3355,7 +3752,7 @@ function addBalanceMov() {
   const monto = movTipoSel === 'ajuste' ? rawMonto : Math.abs(rawMonto);
   const fecha = document.getElementById('movFecha').value || new Date().toISOString().split('T')[0];
   const nota = document.getElementById('movNota').value.trim();
-  data.balanceMovs.push({ id: Date.now(), tipo: movTipoSel, monto, fecha, nota });
+  data.balanceMovs.push({ id: Date.now(), tipo: movTipoSel, monto, fecha, nota, casa: balCasa });
   montoEl.value = '';
   document.getElementById('movNota').value = '';
   save();
@@ -3371,8 +3768,8 @@ function deleteBalanceMov(id) {
 function renderBalanceMovsHistory() {
   const el = document.getElementById('balanceMovsHistory'); if (!el) return;
   ensureBalanceData();
-  const movs = [...data.balanceMovs].sort((a,b) => (b.fecha||'').localeCompare(a.fecha||'') || (b.id-a.id));
-  if (!movs.length) { el.innerHTML = '<div class="no-bets">Todavía no registraste ingresos, retiros ni ajustes.</div>'; return; }
+  const movs = data.balanceMovs.filter(m => m.casa === balCasa).sort((a,b) => (b.fecha||'').localeCompare(a.fecha||'') || (b.id-a.id));
+  if (!movs.length) { el.innerHTML = `<div class="no-bets">Todavía no registraste ingresos, retiros ni ajustes en ${CASA_INFO[balCasa].label}.</div>`; return; }
   const labelOf = m => m.tipo==='ingreso' ? '💵 Ingreso' : m.tipo==='retiro' ? '🏧 Retiro' : '🔧 Ajuste';
   const badgeOf = m => m.tipo==='ingreso' ? 'badge-win' : m.tipo==='retiro' ? 'badge-loss' : 'badge-void';
   const colorOf = m => m.tipo==='ajuste' ? (m.monto>=0?'green':'red') : (m.tipo==='ingreso'?'green':'red');
@@ -3383,7 +3780,7 @@ function renderBalanceMovsHistory() {
     <tr>
       <td>${m.fecha||'—'}</td>
       <td><span class="badge ${badgeOf(m)}">${labelOf(m)}</span></td>
-      <td class="${colorOf(m)}" style="font-family:'DM Mono',monospace;">${signOf(m)}$${Math.abs(m.monto).toFixed(2)}</td>
+      <td class="${colorOf(m)}${balCasa==='bet365'?' usd-amount':''}" style="font-family:'DM Mono',monospace;">${signOf(m)}${CASA_INFO[balCasa].symbol}${Math.abs(m.monto).toFixed(2)}</td>
       <td>${m.nota||'—'}</td>
       <td><button class="btn-del" onclick="deleteBalanceMov(${m.id})">🗑</button></td>
     </tr>`).join('')}</tbody></table></div>`;
@@ -3393,6 +3790,22 @@ function ensureBalancePlugin() {
   if (balancePluginRegistered || typeof Chart === 'undefined') return;
   Chart.register({
     id: 'balanceMovLines',
+    beforeDatasetsDraw(chart, args, opts) {
+      // Línea horizontal fina en $0, de referencia.
+      const yScale = chart.scales?.y;
+      const { ctx, chartArea } = chart;
+      if (!yScale || !chartArea) return;
+      const yZero = yScale.getPixelForValue(0);
+      if (yZero < chartArea.top || yZero > chartArea.bottom) return;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,.08)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(chartArea.left, yZero);
+      ctx.lineTo(chartArea.right, yZero);
+      ctx.stroke();
+      ctx.restore();
+    },
     afterDatasetsDraw(chart, args, opts) {
       const markers = opts && opts.markers;
       if (!markers || !markers.length) return;
@@ -3408,8 +3821,8 @@ function ensureBalancePlugin() {
         // Si hubo ingreso y retiro el mismo día, priorizamos mostrar el retiro (color de alerta).
         const shown = relevant.find(m => m.kind === 'retiro') || relevant[0];
         ctx.save();
-        ctx.strokeStyle = shown.kind === 'ingreso' ? '#22c55e' : '#ef4444';
-        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = shown.kind === 'ingreso' ? 'rgba(34,197,94,.35)' : 'rgba(239,68,68,.35)';
+        ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(pt.x, chartArea.top);
         ctx.lineTo(pt.x, chartArea.bottom);
@@ -3419,6 +3832,13 @@ function ensureBalancePlugin() {
     }
   });
   balancePluginRegistered = true;
+}
+const BAL_MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+function formatBalDate(d) {
+  if (!d || d==='Inicio' || d==='Período') return d;
+  const parts = d.split('-');
+  if (parts.length !== 3) return d;
+  return parseInt(parts[2]) + ' ' + BAL_MESES[parseInt(parts[1])-1];
 }
 function renderBalanceChart() {
   const full = computeBalanceSeries(balView);
@@ -3463,6 +3883,7 @@ function renderBalanceChart() {
   destroyChart('cBalance');
   const c = document.getElementById('chartBalance')?.getContext('2d');
   const color = balView==='jugadas' ? '#6c63ff' : '#e879f9';
+  const sym = CASA_INFO[balCasa].symbol;
   const pointColors = values.map((v,i) => {
     const arr = markers[i];
     if (arr && arr.length) {
@@ -3474,33 +3895,43 @@ function renderBalanceChart() {
     }
     return i===0 ? color : (v>=values[i-1] ? '#22c55e' : '#ef4444');
   });
-  const pointRadii = values.map(() => (values.length>60 ? 0 : 4));
-  if (c) charts.cBalance = new Chart(c, { type:'line', data:{ labels, datasets:[{
-    label: balView==='jugadas' ? 'Balance Jugadas ($)' : 'Balance No Jugadas ($)', data: values, borderColor:color, backgroundColor: balView==='jugadas' ? 'rgba(108,99,255,.12)' : 'rgba(232,121,249,.12)',
-    fill:true, tension:0.4, pointRadius: pointRadii, pointHoverRadius: 6,
+  const pointRadii = values.map(() => (values.length>60 ? 0 : 2.5));
+  const displayLabels = labels.map(formatBalDate);
+  if (c) charts.cBalance = new Chart(c, { type:'line', data:{ labels: displayLabels, datasets:[{
+    label: (balView==='jugadas' ? 'Balance Jugadas' : 'Balance No Jugadas') + ' (' + sym + ')', data: values, borderColor:color, backgroundColor: balView==='jugadas' ? 'rgba(108,99,255,.06)' : 'rgba(232,121,249,.06)',
+    fill:true, tension:0.35, borderWidth:1.5, pointRadius: pointRadii, pointHoverRadius: 5,
     pointBackgroundColor: pointColors,
     pointBorderColor: 'transparent',
     pointBorderWidth: 0
   }] }, options: {
-    ...cOpts('$'),
+    responsive:true, maintainAspectRatio:false,
+    scales: {
+      x: { ticks:{color:'#6b7694', maxTicksLimit:7, font:{size:9}}, grid:{display:false} },
+      y: { ticks:{color:'#6b7694', maxTicksLimit:5, font:{size:9}, callback:v=>(v<0?'-'+sym+Math.abs(v):sym+v)}, grid:{color:'rgba(255,255,255,.04)'} }
+    },
     plugins: {
-      ...cOpts('$').plugins,
+      legend: { display:false },
       balanceMovLines: { markers },
       tooltip: {
         backgroundColor:'#131720', titleColor:'#e2e8f0', bodyColor:'#e2e8f0', borderColor:'#222736', borderWidth:1, padding:9,
-        titleFont:{family:"'DM Mono',monospace",size:11}, bodyFont:{family:"'DM Mono',monospace",size:11},
+        titleFont:{family:"'DM Mono',monospace",size:11,weight:'700'}, bodyFont:{family:"'DM Mono',monospace",size:11},
+        displayColors: false,
         callbacks: {
+          title: (items) => {
+            const i = items[0].dataIndex;
+            const delta = i>0 ? values[i]-values[i-1] : null;
+            const dateLabel = displayLabels[i];
+            if (delta === null) return dateLabel + ' · ' + sym + values[i].toFixed(2);
+            return dateLabel + ' · ' + (delta>=0?'+':'-') + sym + Math.abs(delta).toFixed(2);
+          },
           label: (ctx) => {
-            const lines = ['Balance actual: $' + ctx.parsed.y.toFixed(2)];
             const arr = markers[ctx.dataIndex];
-            if (arr && arr.length) {
-              arr.forEach(m => {
-                if (m.kind==='ingreso') lines.push('💵 Depósito: +$' + m.monto.toFixed(2));
-                else if (m.kind==='retiro') lines.push('🏧 Retiro: -$' + m.monto.toFixed(2));
-                else lines.push('🔧 Ajuste: ' + (m.monto>=0?'+':'') + '$' + m.monto.toFixed(2));
-              });
-            }
-            return lines;
+            if (!arr || !arr.length) return null;
+            return arr.map(m => {
+              if (m.kind==='ingreso') return 'Depósito +' + sym + m.monto.toFixed(2);
+              if (m.kind==='retiro') return 'Retiro -' + sym + m.monto.toFixed(2);
+              return 'Ajuste ' + (m.monto>=0?'+':'') + sym + m.monto.toFixed(2);
+            });
           }
         }
       }
@@ -3512,18 +3943,20 @@ function renderBalanceRanking() {
   const activos = data.tipsters.filter(t => !t.desactivado);
   if (!activos.length) { el.innerHTML = '<div class="no-bets">Sin tipsters registrados.</div>'; return; }
   const key = balView === 'jugadas' ? 'played' : 'skipped';
+  const sym = CASA_INFO[balCasa].symbol;
   const rows = activos.map((t) => {
     const i = data.tipsters.indexOf(t);
-    const s = calcStats(t.bets, key);
+    const betsCasa = t.bets.filter(b => (b.casa||'1xbet') === balCasa);
+    const s = calcStats(betsCasa, key, true);
     return { name:t.name, color: COLORS[i % COLORS.length], profit:s.profit, yield_:s.yield_, wr:s.wr, bets:s.total };
   }).sort((a,b) => b.profit - a.profit);
   el.innerHTML = `<table class="bets-table"><thead><tr>
-    <th>#</th><th>Tipster</th><th>Profit $</th><th>Yield</th><th>Win Rate</th><th>Apuestas${balView==='jugadas'?' Jugadas':' No Jugadas'}</th>
+    <th>#</th><th>Tipster</th><th>Profit ${sym}</th><th>Yield</th><th>Win Rate</th><th>Apuestas${balView==='jugadas'?' Jugadas':' No Jugadas'}</th>
   </tr></thead><tbody>${rows.map((r,i) => `
     <tr>
       <td>${i+1}${i===0&&r.profit>0?' 🏆':''}${i===rows.length-1&&r.profit<0?' 📉':''}</td>
       <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${r.color};margin-right:6px;"></span>${r.name}</td>
-      <td class="${r.profit>=0?'green':'red'}" style="font-family:'DM Mono',monospace;">${fmt(r.profit)}</td>
+      <td class="${r.profit>=0?'green':'red'}${balCasa==='bet365'?' usd-amount':''}" style="font-family:'DM Mono',monospace;">${fmtCasa(r.profit,balCasa)}</td>
       <td class="${r.yield_>=0?'cyan':'red'}" style="font-family:'DM Mono',monospace;">${r.yield_.toFixed(1)}%</td>
       <td class="gold" style="font-family:'DM Mono',monospace;">${r.wr.toFixed(0)}%</td>
       <td>${r.bets}</td>
@@ -3533,6 +3966,13 @@ function renderBalanceTab() {
   ensureBalanceData();
   const view = balView;
   const isJug = view === 'jugadas';
+  const sym = CASA_INFO[balCasa].symbol;
+  const isUsd = balCasa === 'bet365';
+
+  // sync botones de casa
+  const c1x = document.getElementById('balc-1xbet'), c365 = document.getElementById('balc-bet365');
+  if (c1x) c1x.classList.toggle('sel', balCasa==='1xbet');
+  if (c365) c365.classList.toggle('sel', balCasa==='bet365');
 
   // toggle visibility de cajas que solo aplican a plata real (jugadas)
   const tib = document.getElementById('bal-totaling-box'), trb = document.getElementById('bal-totalret-box'), tab = document.getElementById('bal-totalajuste-box');
@@ -3544,45 +3984,50 @@ function renderBalanceTab() {
 
   // sync balance inicial input (sin pisar mientras el usuario está escribiendo)
   const iniInput = document.getElementById('bal-inicial-input');
-  if (iniInput && document.activeElement !== iniInput) iniInput.value = data.balanceAdj.inicial || 0;
+  if (iniInput && document.activeElement !== iniInput) iniInput.value = data.balanceAdj[balCasa].inicial || 0;
   if (!document.getElementById('movFecha').value) document.getElementById('movFecha').value = new Date().toISOString().split('T')[0];
 
   // labels dinámicos
   const suf = isJug ? '(Jugadas)' : '(No Jugadas)';
-  const t1 = document.getElementById('bal-cardtitle'); if (t1) t1.textContent = '💰 Balance Global '+suf;
+  const t1 = document.getElementById('bal-cardtitle'); if (t1) t1.textContent = '💰 Balance '+CASA_INFO[balCasa].label+' '+suf;
   const t2 = document.getElementById('bal-chart-title'); if (t2) t2.textContent = 'Evolución del Balance '+suf;
   const t3 = document.getElementById('bal-ranking-title'); if (t3) t3.textContent = 'Ranking de Tipsters '+suf+' — Más ganador → Más perdedor';
   const t4 = document.getElementById('bal-actual-lbl'); if (t4) t4.textContent = 'Balance Actual '+suf;
   const t5 = document.getElementById('bal-profit-lbl'); if (t5) t5.textContent = 'Profit Total '+suf;
   const desc = document.getElementById('bal-desc');
   if (desc) desc.textContent = isJug
-    ? 'El balance parte de un balance inicial editable (podés dejarlo en 0 y cargar todo por historial), suma los ingresos, resta los retiros, suma/resta los ajustes, y suma el profit acumulado de todas las apuestas jugadas. Cada apuesta ganada lo sube, cada perdida lo baja.'
+    ? `El balance de ${CASA_INFO[balCasa].label} es una cuenta totalmente aparte, en ${CASA_INFO[balCasa].moneda}. Parte de un balance inicial editable, suma los ingresos, resta los retiros, suma/resta los ajustes, y suma el profit acumulado de las apuestas jugadas EN ESTA CASA. Cada apuesta ganada lo sube, cada perdida lo baja.`
     : 'Balance hipotético de las apuestas que registraste pero NO jugaste (solo seguimiento). No incluye ingresos, retiros ni ajustes, porque no es dinero real.';
 
-  const inicial = data.balanceAdj.inicial || 0;
-  const totalIng = data.balanceMovs.filter(m => m.tipo==='ingreso').reduce((s,m) => s+m.monto, 0);
-  const totalRet = data.balanceMovs.filter(m => m.tipo==='retiro').reduce((s,m) => s+m.monto, 0);
-  const totalAjuste = data.balanceMovs.filter(m => m.tipo==='ajuste').reduce((s,m) => s+m.monto, 0);
+  const inicial = data.balanceAdj[balCasa].inicial || 0;
+  const movsCasa = data.balanceMovs.filter(m => m.casa === balCasa);
+  const totalIng = movsCasa.filter(m => m.tipo==='ingreso').reduce((s,m) => s+m.monto, 0);
+  const totalRet = movsCasa.filter(m => m.tipo==='retiro').reduce((s,m) => s+m.monto, 0);
+  const totalAjuste = movsCasa.filter(m => m.tipo==='ajuste').reduce((s,m) => s+m.monto, 0);
   const adj = isJug ? (totalIng - totalRet + totalAjuste) : 0;
   const key = isJug ? 'played' : 'skipped';
   let profitTotal = 0;
-  const perTipster = data.tipsters.filter(t => !t.desactivado).map(t => ({ name:t.name, profit: calcStats(t.bets,key).profit }));
+  const perTipster = data.tipsters.filter(t => !t.desactivado).map(t => {
+    const betsCasa = t.bets.filter(b => (b.casa||'1xbet') === balCasa);
+    return { name:t.name, profit: calcStats(betsCasa, key, true).profit };
+  });
   perTipster.forEach(p => profitTotal += p.profit);
   const balanceActual = inicial + adj + profitTotal;
   const retBase = inicial + adj;
   const retorno = retBase > 0 ? (profitTotal / retBase * 100) : null;
-  const se = (id,txt,cls) => { const e=document.getElementById(id); if(e){ e.textContent=txt; if(cls) e.className = e.id==='bal-actual' ? 'pbox-val-lg '+cls : 'pbox-val '+cls; } };
-  se('bal-actual', fmt(balanceActual), balanceActual>=0?'green':'red');
-  se('bal-totaling', '$'+totalIng.toFixed(2), 'green');
-  se('bal-totalret', '$'+totalRet.toFixed(2), 'red');
-  se('bal-totalajuste', (totalAjuste>=0?'+':'')+'$'+totalAjuste.toFixed(2), totalAjuste>=0?'green':'red');
-  se('bal-profit', fmt(profitTotal), profitTotal>=0?'green':'red');
+  const usdCls = isUsd ? ' usd-amount' : '';
+  const se = (id,txt,cls) => { const e=document.getElementById(id); if(e){ e.textContent=txt; if(cls) e.className = (e.id==='bal-actual' ? 'pbox-val-lg ' : 'pbox-val ')+cls+usdCls; } };
+  se('bal-actual', fmtCasa(balanceActual,balCasa), balanceActual>=0?'green':'red');
+  se('bal-totaling', sym+totalIng.toFixed(2), 'green');
+  se('bal-totalret', sym+totalRet.toFixed(2), 'red');
+  se('bal-totalajuste', (totalAjuste>=0?'+':'')+sym+totalAjuste.toFixed(2), totalAjuste>=0?'green':'red');
+  se('bal-profit', fmtCasa(profitTotal,balCasa), profitTotal>=0?'green':'red');
   se('bal-retorno', retorno!=null ? (retorno>=0?'+':'')+retorno.toFixed(2)+'%' : '—', retorno!=null?(retorno>=0?'green':'red'):'');
   if (perTipster.length) {
     const sorted = [...perTipster].sort((a,b)=>b.profit-a.profit);
     const top = sorted[0], bottom = sorted[sorted.length-1];
-    se('bal-top', top.name+' '+fmt(top.profit), 'gold');
-    se('bal-bottom', bottom.name+' '+fmt(bottom.profit), 'red');
+    se('bal-top', top.name+' '+fmtCasa(top.profit,balCasa), 'gold');
+    se('bal-bottom', bottom.name+' '+fmtCasa(bottom.profit,balCasa), 'red');
   } else {
     se('bal-top', '—', ''); se('bal-bottom', '—', '');
   }
@@ -3650,11 +4095,11 @@ function renderApuestasList() {
       ${descCell(b, 'ap')}
       <td><div class="types-tags">${(b.types||[]).map(tp=>`<span class="type-tag">${tp}</span>`).join('')}</div></td>
       <td style="font-family:'DM Mono',monospace;">${b.stake?b.stake+'u':'—'}</td>
-      <td>$${(b.monto||0).toFixed(0)}</td>
+      <td class="${(b.casa==='bet365')?'usd-amount':''}">${CASA_INFO[b.casa||'1xbet'].symbol}${(b.monto||0).toFixed(0)}</td>
       <td>${(b.cuota||0).toFixed(2)}</td>
       <td><span class="badge ${b.played?'badge-played':'badge-skipped'}">${b.played?'✅':'👁'}</span></td>
       <td><span class="badge badge-${b.result}">${b.result==='pending'?'⏳ Jugándose':resLabel(b.result)}</span></td>
-      <td class="${p>=0?'green':'red'}" style="font-family:'DM Mono',monospace;">${b.result!=='pending'?fmt(p):'—'}</td>
+      <td class="${(p>=0?'green':'red')+((b.casa==='bet365')?' usd-amount':'')}" style="font-family:'DM Mono',monospace;">${b.result!=='pending'?fmtCasa(p,b.casa||'1xbet'):'—'}</td>
       <td class="${u!==null?(u>=0?'cyan':'red'):''}" style="font-family:'DM Mono',monospace;">${u!==null&&b.result!=='pending'?fmtU(u):'—'}</td>
       <td><div style="display:flex;gap:4px;"><button class="btn-edit" onclick="openEditModal(${b.tipsterId},${b.id})">✏️</button><button class="btn-del" onclick="deleteBet(${b.tipsterId},${b.id})">🗑</button></div></td>
     </tr>`;
@@ -4100,7 +4545,15 @@ if('serviceWorker' in navigator){
 window.onDeporteChange=function(){};
 window.applyQuickStake=applyQuickStake;
 window.renderStakeQuickBtns=renderStakeQuickBtns;
+window.toggleAnalisisRiesgo=toggleAnalisisRiesgo;
+window.updateExchangeRate=updateExchangeRate;
 window.switchTab=switchTab;
+window.toggleMoreMenu=toggleMoreMenu;
+window.closeMoreMenu=closeMoreMenu;
+window.openAnalisis=openAnalisis;
+window.openVistaPicker=openVistaPicker;
+window.closeVistaPicker=closeVistaPicker;
+window.selectVista=selectVista;
 window.addTipster=addTipster;
 window.deleteTipster=deleteTipster;
 window.archiveTipster=archiveTipster;
@@ -4123,6 +4576,7 @@ window.openEditTipsterModal=openEditTipsterModal;
 window.setETMode=setETMode;
 window.toggleETAutoCuota=toggleETAutoCuota;
 window.toggleETForceCuotaSugerida=toggleETForceCuotaSugerida;
+window.setETCasaDefault=setETCasaDefault;
 window.toggleAutoCuota=toggleAutoCuota;
 window.addETRow=addETRow;
 window.closeEditTipsterModal=closeEditTipsterModal;
@@ -4135,12 +4589,22 @@ window.setTCFilter=setTCFilter;
 window.setTCMetric=setTCMetric;
 window.setResult=setResult;
 window.toggleEditDescExpand=toggleEditDescExpand;
+window.setEditCasa=setEditCasa;
 window.toggleDescExpand=toggleDescExpand;
 window.setJugada=setJugada;
 window.recalcEditMontoForJugadaContext=recalcEditMontoForJugadaContext;
 window.toggleChip=toggleChip;
 window.updatePreview=updatePreview;
 window.onTipsterChange=onTipsterChange;
+window.setCurCasa=setCurCasa;
+window.openTipsterPicker=openTipsterPicker;
+window.closeTipsterPicker=closeTipsterPicker;
+window.selectTipsterFromPicker=selectTipsterFromPicker;
+window.openDeportePicker=openDeportePicker;
+window.closeDeportePicker=closeDeportePicker;
+window.renderDeportePickerL1=renderDeportePickerL1;
+window.openDeporteSubmenu=openDeporteSubmenu;
+window.selectDeporteFinal=selectDeporteFinal;
 window.onStakeInput=onStakeInput;
 window.onMontoInput=onMontoInput;
 window.toggleAutoStake=toggleAutoStake;
@@ -4180,6 +4644,7 @@ window.setBalancePeriod=setBalancePeriod;
 window.setBalDateRange=setBalDateRange;
 window.clearBalDateRange=clearBalDateRange;
 window.setBalanceView=setBalanceView;
+window.setBalCasa=setBalCasa;
 window.updateBalanceInicial=updateBalanceInicial;
 window.setMovTipo=setMovTipo;
 window.addBalanceMov=addBalanceMov;
