@@ -453,6 +453,13 @@ select option{background:var(--s2);}
         <div class="casa-btn casa-bet365" id="curcasa-bet365" onclick="setCurCasa('bet365')">bet<span class="casa-accent">365</span></div>
       </div>
     </div>
+    <div class="fg" style="margin-bottom:9px;">
+      <label>Grupo <span class="opt">(opcional — para filtrar en Gráficas)</span></label>
+      <button type="button" class="picker-trigger" id="bGrupoTrigger" onclick="openGrupoPicker('bGrupo')">
+        <span class="picker-trigger-text">— Sin grupo —</span><span class="chev">▾</span>
+      </button>
+      <input type="hidden" id="bGrupo" value="">
+    </div>
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
       <button class="auto-badge" id="sonadoraBadge" onclick="toggleSonadora()" style="font-size:0.72rem;padding:6px 13px;">🌙 Soñadora: OFF</button>
       <button class="auto-badge" id="retoModeBadge" onclick="toggleRetoMode()" style="font-size:0.72rem;padding:6px 13px;">🎯 Modo Reto: OFF</button>
@@ -624,6 +631,9 @@ select option{background:var(--s2);}
       </div>
       <div><span class="flbl">Tipsters:</span>
         <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;" id="chartTipsterFilter"></div>
+      </div>
+      <div><span class="flbl">Grupo:</span>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;" id="chartGrupoFilterBar"></div>
       </div>
       <div>
         <span class="flbl">Período rápido:</span>
@@ -889,6 +899,17 @@ select option{background:var(--s2);}
   <div class="picker-sheet" id="deportePickerList"></div>
 </div>
 
+<!-- PICKER: Grupo (libre, con opción de crear uno nuevo) -->
+<div class="picker-overlay" id="grupoPickerOverlay" style="display:none;" onclick="if(event.target===this)closeGrupoPicker()">
+  <div class="picker-sheet">
+    <div style="padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.055);display:flex;gap:6px;">
+      <input type="text" id="grupoNewInput" placeholder="Nuevo grupo..." style="flex:1;">
+      <button class="btn btn-primary btn-sm" onclick="addNewGrupo()">➕</button>
+    </div>
+    <div id="grupoPickerList"></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="editModal" style="display:none;" onclick="if(event.target===this)closeEditModal()">
   <div class="modal-box">
     <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -901,6 +922,13 @@ select option{background:var(--s2);}
       <div class="casa-btn casa-bet365" id="ecasa-bet365" onclick="setEditCasa('bet365')">bet<span class="casa-accent">365</span></div>
     </div>
     <input type="hidden" id="eCasa" value="1xbet">
+    <div class="fg" style="margin-bottom:9px;">
+      <label>Grupo <span class="opt">(opcional)</span></label>
+      <button type="button" class="picker-trigger" id="eGrupoTrigger" onclick="openGrupoPicker('eGrupo')">
+        <span class="picker-trigger-text">— Sin grupo —</span><span class="chev">▾</span>
+      </button>
+      <input type="hidden" id="eGrupo" value="">
+    </div>
     <div class="form-grid">
       <div class="fg">
         <label>Descripción <span class="opt">(opcional)</span>
@@ -995,11 +1023,17 @@ select option{background:var(--s2);}
 
     <!-- STAKE DEFAULT (visible solo en modo default) -->
     <div id="etDefaultSection" style="display:none;margin-bottom:13px;">
-      <div class="form-grid">
+      <div style="font-size:0.62rem;color:var(--muted2);font-weight:700;margin-bottom:5px;">1xbet ($)</div>
+      <div class="form-grid" style="margin-bottom:9px;">
         <div class="fg"><label>Stake (u)</label><input type="number" id="etDefaultStake" min="0.5" step="0.5" placeholder="ej: 1"></div>
         <div class="fg"><label>Monto equivalente ($)</label><input type="number" id="etDefaultMonto" min="1" step="1" placeholder="ej: 100"></div>
       </div>
-      <div style="font-size:0.6rem;color:var(--muted);margin-top:4px;">⚠️ Este valor es GLOBAL: se aplica a todos los tipsters que uses en modo Stake Default (no es por tipster). Cualquier otro stake se escala proporcionalmente — ej: si 1u=$100, entonces 2u=$200 automático.</div>
+      <div style="font-size:0.62rem;color:var(--muted2);font-weight:700;margin-bottom:5px;">bet365 (US$)</div>
+      <div class="form-grid">
+        <div class="fg"><label>Stake (u)</label><input type="number" id="etDefaultStakeUsd" min="0.5" step="0.5" placeholder="ej: 1"></div>
+        <div class="fg"><label>Monto equivalente (US$)</label><input type="number" id="etDefaultMontoUsd" min="0.5" step="0.5" placeholder="ej: 2.5"></div>
+      </div>
+      <div style="font-size:0.6rem;color:var(--muted);margin-top:4px;">⚠️ Estos valores son GLOBALES: se aplican a todos los tipsters que uses en modo Stake Default (no es por tipster). Cualquier otro stake se escala proporcionalmente — ej: si 1u=$100 en 1xbet, entonces 2u=$200 automático (cada casa escala con su propio par).</div>
     </div>
 
     <!-- % DEL BANK (visible solo en modo bankpct) -->
@@ -1153,6 +1187,7 @@ let autoStakeOn = true;
 let betException = false;
 let betCuotaException = false;
 let chartFilter = 'all', chartTipsters = [], chartPeriod = 'all', chartDateFrom = null, chartDateTo = null;
+let chartGrupoFilter = null;
 let chartExcludeArchived = true;
 let chartTypesFilter = [];
 let unitFilter = 'all', unitTipster = 'all', unitPeriod = 'all', unitDateFrom = null, unitDateTo = null;
@@ -1201,6 +1236,7 @@ function initApp() {
   ensureGlobalStakeDefault();
   migrateOldTypeLabels();
   ensureNotas();
+  ensureGrupos();
   data.tipsters.forEach(t => { refreshBankPico(t); maybeRefreshBankPctSnapshot(t); });
   updateDeportePickerTrigger('bDeporte');
   renderAll();
@@ -1221,6 +1257,7 @@ function startFB() {
       ensureGlobalStakeDefault();
       migrateOldTypeLabels();
       ensureNotas();
+      ensureGrupos();
       localStorage.setItem('tipsterbook_v4', JSON.stringify(data));
       renderAll();
     }
@@ -1328,12 +1365,14 @@ function toggleDescExpand(idKey) {
   if (arrow) arrow.textContent = isExp ? '▲' : '▼';
 }
 function ensureExchangeRate() {
-  if (!data.exchangeRate || data.exchangeRate <= 0) data.exchangeRate = 1000;
+  if (!data.exchangeRate || data.exchangeRate <= 0) data.exchangeRate = 40;
+  if (data.exchangeRate === 1000 && !data.exchangeRateManuallySet) data.exchangeRate = 40; // corrige el default viejo (mal puesto) si el usuario no lo tocó a mano
 }
 function updateExchangeRate(val) {
   const n = parseFloat(val);
   if (!n || n <= 0) return;
   data.exchangeRate = n;
+  data.exchangeRateManuallySet = true;
   save();
   renderAll();
 }
@@ -1432,6 +1471,9 @@ const DEPORTE_L1 = [
 ];
 const DEPORTE_SUB = {
   europeo: [
+    {emoji:'🏆', label:'UCL (Champions League)'},
+    {emoji:'🥈', label:'UEL (Europa League)'},
+    {emoji:'🥉', label:'Conference League'},
     {emoji:'🇮🇹', label:'Italia'},
     {emoji:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', label:'Inglaterra'},
     {emoji:'🇪🇸', label:'España'},
@@ -1447,7 +1489,7 @@ const DEPORTE_SUB = {
     {emoji:'🇺🇾', label:'Uruguay'},
     {emoji:'🇦🇷', label:'Argentina'},
     {emoji:'🇧🇷', label:'Brasil'},
-    {emoji:'🇨🇱🇨🇴🇻🇪🇵🇪🇵🇾🇧🇴', label:'Chile/Colombia/Venezuela/Perú/Paraguay/Bolivia'},
+    {emoji:'🌎', label:'Resto de Latinoamérica'},
     {emoji:'🇺🇸🇨🇦', label:'Estados Unidos/Canadá'},
     {emoji:'🇲🇽', label:'México'},
     {emoji:'🌎', label:'Centroamérica'},
@@ -1462,7 +1504,6 @@ const DEPORTE_SUB = {
     {emoji:'🇰🇷', label:'Corea'},
     {emoji:'🌍', label:'Selecciones África'},
     {emoji:'🌏', label:'Selecciones Asia'},
-    {emoji:'🎯', label:'Otro'},
   ]
 };
 let deportePickerTarget = 'bDeporte';
@@ -1519,9 +1560,20 @@ function renderDeportePickerL1() {
   const cur = document.getElementById(deportePickerTarget)?.value || '';
   list.innerHTML = DEPORTE_L1.map(d => {
     const isSel = cur === d.key;
-    return `<div class="picker-row" onclick="${d.sub ? `openDeporteSubmenu('${d.sub}','${d.key.replace(/'/g,"\\'")}')` : `selectDeporteFinal('${d.key.replace(/'/g,"\\'")}')`}">
+    const keyEsc = d.key.replace(/'/g,"\\'");
+    if (d.sub) {
+      // Tocar el nombre selecciona esa categoría directo (sin especificar país).
+      // Solo la flechita de la derecha abre el submenú de países.
+      return `<div class="picker-row" style="padding:0;">
+        <div class="picker-row-left" style="flex:1;padding:13px 10px 13px 18px;cursor:pointer;min-width:0;" onclick="selectDeporteFinal('${keyEsc}')">
+          <span class="picker-name">${d.emoji} ${d.label}</span>${isSel?'<span class="picker-radio sel" style="display:inline-block;margin-left:8px;vertical-align:middle;"></span>':''}
+        </div>
+        <div style="padding:13px 18px;cursor:pointer;color:var(--muted);flex-shrink:0;min-width:52px;text-align:center;font-size:1rem;" onclick="openDeporteSubmenu('${d.sub}','${keyEsc}')">›</div>
+      </div>`;
+    }
+    return `<div class="picker-row" onclick="selectDeporteFinal('${keyEsc}')">
       <div class="picker-row-left"><span class="picker-name">${d.emoji} ${d.label}</span></div>
-      ${d.sub ? '<span class="picker-arrow">›</span>' : `<span class="picker-radio${isSel?' sel':''}"></span>`}
+      <span class="picker-radio${isSel?' sel':''}"></span>
     </div>`;
   }).join('');
 }
@@ -1563,6 +1615,52 @@ function updateDeportePickerTrigger(targetId) {
     const cat = DEPORTE_L1.find(d => d.key === val);
     txt.textContent = cat ? `${cat.emoji} ${cat.label}` : val;
   }
+}
+
+// ============================================================
+// PICKER: GRUPO (libre, el usuario crea sus propios grupos para filtrar en Gráficas)
+// ============================================================
+let grupoPickerTarget = 'bGrupo';
+function openGrupoPicker(targetId) {
+  ensureGrupos();
+  grupoPickerTarget = targetId;
+  const inputEl = document.getElementById('grupoNewInput'); if (inputEl) inputEl.value = '';
+  renderGrupoPickerList();
+  document.getElementById('grupoPickerOverlay').style.display = 'flex';
+}
+function closeGrupoPicker() { document.getElementById('grupoPickerOverlay').style.display = 'none'; }
+function renderGrupoPickerList() {
+  const list = document.getElementById('grupoPickerList'); if (!list) return;
+  const cur = document.getElementById(grupoPickerTarget)?.value || '';
+  let html = `<div class="picker-row" onclick="selectGrupoFromPicker('')">
+    <div class="picker-row-left"><span class="picker-name">— Sin grupo —</span></div>
+    <span class="picker-radio${cur===''?' sel':''}"></span>
+  </div>`;
+  html += data.grupos.map(g => `<div class="picker-row" onclick="selectGrupoFromPicker('${g.replace(/'/g,"\\'")}')">
+    <div class="picker-row-left"><span class="picker-name">🏷️ ${g}</span></div>
+    <span class="picker-radio${cur===g?' sel':''}"></span>
+  </div>`).join('');
+  list.innerHTML = html;
+}
+function addNewGrupo() {
+  ensureGrupos();
+  const inputEl = document.getElementById('grupoNewInput');
+  const name = inputEl.value.trim();
+  if (!name) return;
+  if (!data.grupos.includes(name)) { data.grupos.push(name); save(); }
+  selectGrupoFromPicker(name);
+}
+function selectGrupoFromPicker(g) {
+  const target = document.getElementById(grupoPickerTarget);
+  if (target) target.value = g;
+  updateGrupoPickerTrigger(grupoPickerTarget);
+  closeGrupoPicker();
+}
+function updateGrupoPickerTrigger(targetId) {
+  const val = document.getElementById(targetId)?.value || '';
+  const btn = document.getElementById(targetId + 'Trigger'); if (!btn) return;
+  const txt = btn.querySelector('.picker-trigger-text'); if (!txt) return;
+  txt.textContent = val ? '🏷️ ' + val : '— Sin grupo —';
 }
 
 function mostUsedSport(bets) {
@@ -1613,8 +1711,13 @@ function avgCuota(bets, jugada=null) {
   return b.reduce((s,x) => s + x.cuota, 0) / b.length;
 }
 
-function avgStakeRatio(bets, jugada=null) {
+function avgStakeRatio(bets, jugada=null, casa=null) {
   let b = bets.filter(x => x.stake && x.monto);
+  if (casa !== null) {
+    // A diferencia del filtro de jugada, acá NO hay fallback: mezclar pesos (1xbet) con dólares (bet365)
+    // en el mismo promedio daría un monto sugerido totalmente errado.
+    b = b.filter(x => (x.casa||'1xbet') === casa);
+  }
   if (jugada !== null) {
     const filtered = b.filter(x => x.played === jugada);
     if (filtered.length) b = filtered; // si hay historial específico (jugada/no jugada), se usa ese
@@ -1877,7 +1980,7 @@ function renderTipsterList() {
     const s = calcStats(statsBets(t.bets), 'played');
     const sk = calcStats(statsBets(t.bets), 'skipped');
     const pc = t.bets.filter(b=>b.played).length, tc = t.bets.length;
-    const ratio = avgStakeRatio(t.bets);
+    const ratio = avgStakeRatio(t.bets, null, '1xbet');
     const roi = t.bankroll && t.bankroll > 0 ? s.profit / t.bankroll * 100 : null;
     const isInactive = t.archivado || t.desactivado;
     const badge = t.desactivado
@@ -2179,8 +2282,11 @@ function openEditTipsterModal(id) {
   }
   ensureGlobalStakeDefault();
   const defStakeEl = document.getElementById('etDefaultStake'), defMontoEl = document.getElementById('etDefaultMonto');
-  if (defStakeEl) defStakeEl.value = data.globalStakeDefault.stake;
-  if (defMontoEl) defMontoEl.value = data.globalStakeDefault.monto;
+  if (defStakeEl) defStakeEl.value = data.globalStakeDefault['1xbet'].stake;
+  if (defMontoEl) defMontoEl.value = data.globalStakeDefault['1xbet'].monto;
+  const defStakeUsdEl = document.getElementById('etDefaultStakeUsd'), defMontoUsdEl = document.getElementById('etDefaultMontoUsd');
+  if (defStakeUsdEl) defStakeUsdEl.value = data.globalStakeDefault['bet365'].stake;
+  if (defMontoUsdEl) defMontoUsdEl.value = data.globalStakeDefault['bet365'].monto;
   setETCasaDefault(t.casaDefault || null);
   document.getElementById('editTipsterModal').style.display = 'flex';
 }
@@ -2237,8 +2343,13 @@ function saveEditTipster() {
   if (etStakeMode === 'default') {
     const dStake = parseFloat(document.getElementById('etDefaultStake').value);
     const dMonto = parseFloat(document.getElementById('etDefaultMonto').value);
-    if (!dStake || dStake <= 0 || !dMonto || dMonto <= 0) return showAlert('Completá el stake y el monto equivalente para Stake Default.');
-    data.globalStakeDefault = { stake: dStake, monto: dMonto };
+    const dStakeUsd = parseFloat(document.getElementById('etDefaultStakeUsd').value);
+    const dMontoUsd = parseFloat(document.getElementById('etDefaultMontoUsd').value);
+    if (!dStake || dStake <= 0 || !dMonto || dMonto <= 0) return showAlert('Completá el stake y el monto equivalente para Stake Default (1xbet).');
+    if (!dStakeUsd || dStakeUsd <= 0 || !dMontoUsd || dMontoUsd <= 0) return showAlert('Completá el stake y el monto equivalente para Stake Default (bet365).');
+    ensureGlobalStakeDefault();
+    data.globalStakeDefault['1xbet'] = { stake: dStake, monto: dMonto };
+    data.globalStakeDefault['bet365'] = { stake: dStakeUsd, monto: dMontoUsd };
   }
   const acBtn = document.getElementById('etAutoCuota');
   t.autoCuota = acBtn ? acBtn.classList.contains('on') : true;
@@ -2279,7 +2390,7 @@ function prefillFromTipster(t) {
       if (top.length) defaultStake = top[0];
     }
     document.getElementById('bStake').value = defaultStake;
-    const monto = resolveMontoFromStake(t, defaultStake, curJugada);
+    const monto = resolveMontoFromStake(t, defaultStake, curJugada, curCasa);
     if (monto != null) document.getElementById('bMonto').value = monto.toFixed(2);
   }
   if (!betCuotaException && t.autoCuota !== false) {
@@ -2387,7 +2498,7 @@ function toggleAutoStake() {
     if (t) {
       const stake = parseFloat(document.getElementById('bStake').value);
       if (!isNaN(stake) && stake > 0) {
-        const monto = resolveMontoFromStake(t, stake, curJugada);
+        const monto = resolveMontoFromStake(t, stake, curJugada, curCasa);
         if (monto !== null) document.getElementById('bMonto').value = monto.toFixed(2);
       }
     }
@@ -2447,16 +2558,25 @@ function migrateOldTypeLabels() {
   });
 }
 function ensureGlobalStakeDefault() {
-  if (!data.globalStakeDefault || !data.globalStakeDefault.stake || !data.globalStakeDefault.monto) {
-    data.globalStakeDefault = { stake: 1, monto: 100 };
+  // Migración: estructura vieja plana (una sola casa) -> por casa (1xbet $ / bet365 US$).
+  if (data.globalStakeDefault && typeof data.globalStakeDefault.stake === 'number' && !data.globalStakeDefault['1xbet']) {
+    const old = data.globalStakeDefault;
+    data.globalStakeDefault = { '1xbet': { stake: old.stake, monto: old.monto }, 'bet365': { stake: 1, monto: 2.5 } };
+  }
+  if (!data.globalStakeDefault) data.globalStakeDefault = {};
+  if (!data.globalStakeDefault['1xbet'] || !data.globalStakeDefault['1xbet'].stake || !data.globalStakeDefault['1xbet'].monto) {
+    data.globalStakeDefault['1xbet'] = { stake: 1, monto: 100 };
+  }
+  if (!data.globalStakeDefault['bet365'] || !data.globalStakeDefault['bet365'].stake || !data.globalStakeDefault['bet365'].monto) {
+    data.globalStakeDefault['bet365'] = { stake: 1, monto: 2.5 };
   }
 }
-function resolveMontoFromStake(t, stake, jugada=null) {
+function resolveMontoFromStake(t, stake, jugada=null, casa=null) {
   const mode = t.stakeMode || (t.autoStake !== false ? 'avg' : 'off');
   if (mode === 'off') return null;
   if (mode === 'default') {
     ensureGlobalStakeDefault();
-    const gd = data.globalStakeDefault;
+    const gd = data.globalStakeDefault[casa || '1xbet'];
     return gd.stake > 0 ? stake * (gd.monto / gd.stake) : null;
   }
   if (mode === 'bankpct') {
@@ -2478,16 +2598,16 @@ function resolveMontoFromStake(t, stake, jugada=null) {
       if (ref.stake > 0) return stake * (ref.monto / ref.stake);
     }
   }
-  const ratio = avgStakeRatio(t.bets, jugada);
+  const ratio = avgStakeRatio(t.bets, jugada, casa);
   return ratio ? stake * ratio : null;
 }
 
-function resolveStakeFromMonto(t, monto, jugada=null) {
+function resolveStakeFromMonto(t, monto, jugada=null, casa=null) {
   const mode = t.stakeMode || (t.autoStake !== false ? 'avg' : 'off');
   if (mode === 'off') return null;
   if (mode === 'default') {
     ensureGlobalStakeDefault();
-    const gd = data.globalStakeDefault;
+    const gd = data.globalStakeDefault[casa || '1xbet'];
     return gd.monto > 0 ? monto / (gd.monto / gd.stake) : null;
   }
   if (mode === 'bankpct') {
@@ -2510,7 +2630,7 @@ function resolveStakeFromMonto(t, monto, jugada=null) {
       if (ref.monto > 0) return monto / (ref.monto / ref.stake);
     }
   }
-  const ratio = avgStakeRatio(t.bets, jugada);
+  const ratio = avgStakeRatio(t.bets, jugada, casa);
   return ratio ? monto / ratio : null;
 }
 
@@ -2520,7 +2640,7 @@ function onStakeInput() {
     if (t) {
       const stake = parseFloat(document.getElementById('bStake').value);
       if (!isNaN(stake) && stake > 0) {
-        const monto = resolveMontoFromStake(t, stake, curJugada);
+        const monto = resolveMontoFromStake(t, stake, curJugada, curCasa);
         if (monto !== null) document.getElementById('bMonto').value = monto.toFixed(2);
       }
     }
@@ -2539,7 +2659,7 @@ function onMontoInput() {
     if (t) {
       const monto = parseFloat(document.getElementById('bMonto').value);
       if (!isNaN(monto) && monto > 0) {
-        const stake = resolveStakeFromMonto(t, monto, curJugada);
+        const stake = resolveStakeFromMonto(t, monto, curJugada, curCasa);
         if (stake !== null) document.getElementById('bStake').value = stake.toFixed(1);
       }
     }
@@ -3239,7 +3359,7 @@ function recalcMontoForJugadaContext() {
   if (!t) return;
   const stake = parseFloat(document.getElementById('bStake').value);
   if (isNaN(stake) || stake <= 0) return;
-  const monto = resolveMontoFromStake(t, stake, curJugada);
+  const monto = resolveMontoFromStake(t, stake, curJugada, curCasa);
   if (monto != null) {
     document.getElementById('bMonto').value = monto.toFixed(2);
     updatePreview();
@@ -3306,6 +3426,7 @@ function saveBet() {
     eventos: parseInt(document.getElementById('bEventos').value)||1,
     deporte: document.getElementById('bDeporte').value,
     casa: document.getElementById('bCasa').value || '1xbet',
+    grupo: document.getElementById('bGrupo').value || '',
     fecha: document.getElementById('bFecha').value,
     types: getChips('betTypeChips'),
     played: curJugada,
@@ -3374,6 +3495,8 @@ function clearForm() {
   betCuotaException = false;
   updateExceptionRow();
   setCurCasa('1xbet');
+  document.getElementById('bGrupo').value = '';
+  updateGrupoPickerTrigger('bGrupo');
   if (retoModeOn && activeRetoId) applyRetoStakeToForm();
   updateRiskPanel();
 }
@@ -3405,6 +3528,8 @@ function openEditModal(tid, bid) {
   document.getElementById('editBetId').value=bid;
   document.getElementById('editTipsterId').value=tid;
   setEditCasa(b.casa || '1xbet');
+  document.getElementById('eGrupo').value = b.grupo || '';
+  updateGrupoPickerTrigger('eGrupo');
   document.getElementById('eDesc').value=b.desc||'';
   document.getElementById('eDesc').rows=1;
   document.getElementById('eDesc').style.overflow='hidden';
@@ -3463,7 +3588,7 @@ function recalcEditMontoForJugadaContext() {
   if (!t) return;
   const stake = parseFloat(document.getElementById('eStake').value);
   if (isNaN(stake) || stake <= 0) return;
-  const monto = resolveMontoFromStake(t, stake, editJugada);
+  const monto = resolveMontoFromStake(t, stake, editJugada, document.getElementById('eCasa').value);
   if (monto != null) document.getElementById('eMonto').value = monto.toFixed(2);
 }
 function toggleEditChip(el) { el.classList.toggle('selected'); }
@@ -3481,6 +3606,7 @@ function saveEditBet() {
   const eDepSel2 = document.getElementById('eDeporte');
   if (eDepSel2) b.deporte = eDepSel2.value;
   b.casa = document.getElementById('eCasa').value || '1xbet';
+  b.grupo = document.getElementById('eGrupo').value || '';
   b.types=getChips('editBetTypeChips');
   b.played=editJugada; b.result=editResult;
   b.esSonadora=editSonadora;
@@ -3593,6 +3719,9 @@ function getBaselineTotal() {
 // ============================================================
 function ensureNotas() {
   if (!data.notas) data.notas = [];
+}
+function ensureGrupos() {
+  if (!data.grupos) data.grupos = [];
 }
 function addNota() {
   ensureNotas();
@@ -4345,6 +4474,19 @@ function updateChartTipsterFilter(){
       const col = COLORS[i % COLORS.length];
       return `<button class="tipster-chip ${sel?'sel':''}" style="--tc:${col}" onclick="toggleChartTipster(${t.id})">${t.desactivado?'🔌 ':t.archivado?'📦 ':''}${t.name}</button>`;
     }).join('');
+  updateChartGrupoFilterBar();
+}
+function updateChartGrupoFilterBar(){
+  const el=document.getElementById('chartGrupoFilterBar'); if(!el) return;
+  ensureGrupos();
+  if (!data.grupos.length) { el.innerHTML = '<span style="font-size:0.62rem;color:var(--muted);">Todavía no creaste grupos. Se crean desde Nueva Apuesta.</span>'; return; }
+  el.innerHTML = `<button class="tf-btn ${!chartGrupoFilter?'active':''}" onclick="setChartGrupoFilter(null)">Todos</button>` +
+    data.grupos.map(g => `<button class="tf-btn ${chartGrupoFilter===g?'active':''}" onclick="setChartGrupoFilter('${g.replace(/'/g,"\\'")}')">🏷️ ${g}</button>`).join('');
+}
+function setChartGrupoFilter(g){
+  chartGrupoFilter = g;
+  updateChartGrupoFilterBar();
+  renderCharts();
 }
 function toggleExcludeArchived() {
   chartExcludeArchived = !chartExcludeArchived;
@@ -4358,11 +4500,15 @@ function getActiveTipsters(){
   if (chartExcludeArchived) ts = ts.filter(t=>!t.archivado&&!t.desactivado);
   return ts;
 }
+function filterByGrupo(bets) {
+  return chartGrupoFilter ? bets.filter(b => b.grupo === chartGrupoFilter) : bets;
+}
 function getFilteredBets(){
   let ts=getActiveTipsters();
   let bets=ts.flatMap(t=>statsBets(t.bets).map(b=>({...b,tipsterName:t.name})));
   if(chartFilter==='played') bets=bets.filter(b=>b.played);
   else if(chartFilter==='skipped') bets=bets.filter(b=>!b.played);
+  if(chartGrupoFilter) bets=bets.filter(b=>b.grupo===chartGrupoFilter);
   return filterByPeriodEx(bets,chartPeriod);
 }
 function renderCharts(){
@@ -4417,7 +4563,7 @@ function renderCharts(){
   if(c3) charts.cTypes=new Chart(c3,{type:'bar',data:{labels:tl,datasets:[{label:'Profit',data:tvFinal,backgroundColor:tvFinal.map(v=>v>=0?'rgba(34,197,94,.6)':'rgba(239,68,68,.6)'),borderColor:tvFinal.map(v=>v>=0?'#22c55e':'#ef4444'),borderWidth:1,borderRadius:3}]},options:{indexAxis:'y',...cOpts('$'),plugins:{...cOpts('$').plugins,legend:{display:false}}}});
 
   destroyChart('cJugadas');
-  let allB=filterByPeriodEx(getActiveTipsters().flatMap(t=>statsBets(t.bets)),chartPeriod).filter(b=>b.result!=='pending');
+  let allB=filterByGrupo(filterByPeriodEx(getActiveTipsters().flatMap(t=>statsBets(t.bets)),chartPeriod)).filter(b=>b.result!=='pending');
   const pb2=allB.filter(b=>b.played),sb2=allB.filter(b=>!b.played);
   const pP=pb2.reduce((s,b)=>s+calcProfit(b),0),sP=sb2.reduce((s,b)=>s+calcProfit(b),0);
   const pI=pb2.reduce((s,b)=>s+(b.monto||0),0),sI=sb2.reduce((s,b)=>s+(b.monto||0),0);
@@ -4441,7 +4587,7 @@ function renderCharts(){
     const allSortedDates=filterByPeriodEx([...allDates].sort().map(d=>({fecha:d})),chartPeriod).map(x=>x.fecha);
     if(allSortedDates.length){
       const datasets=activeTips.map((t,i)=>{
-        let b=statsBets(t.bets).filter(x=>x.result!=='pending'&&x.fecha);
+        let b=filterByGrupo(statsBets(t.bets).filter(x=>x.result!=='pending'&&x.fecha));
         if(chartFilter==='played') b=b.filter(x=>x.played);
         else if(chartFilter==='skipped') b=b.filter(x=>!x.played);
         const dm={};b.forEach(x=>{if(!dm[x.fecha])dm[x.fecha]=0;dm[x.fecha]+=calcProfit(x);});
@@ -4458,14 +4604,14 @@ function renderCharts(){
   destroyChart('cYield');
   if (multiMode) {
     const rL=activeTips.map(t=>t.name);
-    const rP=activeTips.map(t=>parseFloat(calcStats(filterByPeriodEx(statsBets(t.bets),chartPeriod),'played').yield_.toFixed(1)));
-    const rS=activeTips.map(t=>parseFloat(calcStats(filterByPeriodEx(statsBets(t.bets),chartPeriod),'skipped').yield_.toFixed(1)));
+    const rP=activeTips.map(t=>parseFloat(calcStats(filterByGrupo(filterByPeriodEx(statsBets(t.bets),chartPeriod)),'played').yield_.toFixed(1)));
+    const rS=activeTips.map(t=>parseFloat(calcStats(filterByGrupo(filterByPeriodEx(statsBets(t.bets),chartPeriod)),'skipped').yield_.toFixed(1)));
     const c6=document.getElementById('chartYieldComparison')?.getContext('2d');
     if(c6) charts.cYield=new Chart(c6,{type:'bar',data:{labels:rL,datasets:[{label:'✅ Yield Jugadas',data:rP,backgroundColor:rP.map(v=>v>=0?'rgba(34,197,94,.6)':'rgba(239,68,68,.6)'),borderColor:rP.map(v=>v>=0?'#22c55e':'#ef4444'),borderWidth:1},{label:'👁 Yield No Jugadas',data:rS,backgroundColor:rS.map(v=>v>=0?'rgba(6,182,212,.55)':'rgba(251,146,60,.65)'),borderColor:rS.map(v=>v>=0?'#06b6d4':'#fb923c'),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#e2e8f0',font:{family:'DM Sans'}}}},scales:{x:{ticks:{color:'#6b7694'},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#6b7694',callback:v=>v+'%'},grid:{color:'rgba(255,255,255,.04)'}}}}});
   }
 
   destroyChart('cROI');
-  const roiAllBets = filterByPeriodEx(activeTips.flatMap(t=>statsBets(t.bets).map(b=>({...b,tName:t.name}))),chartPeriod)
+  const roiAllBets = filterByGrupo(filterByPeriodEx(activeTips.flatMap(t=>statsBets(t.bets).map(b=>({...b,tName:t.name}))),chartPeriod))
     .filter(b=>b.result!=='pending'&&b.fecha);
   const roiMap={p:{},s:{},a:{}};
   roiAllBets.forEach(b=>{
@@ -4528,7 +4674,7 @@ function exportData(){
 function importData(ev){
   const f=ev.target.files[0];if(!f)return;
   const r=new FileReader();
-  r.onload=e=>{try{data=JSON.parse(e.target.result); if(!data.retos) data.retos=[]; ensureBalanceData(); ensureGlobalStakeDefault(); migrateOldTypeLabels(); ensureNotas(); data.tipsters.forEach(t=>{refreshBankPico(t);maybeRefreshBankPctSnapshot(t);}); save();renderAll();showToast('✅ Datos importados');}catch{showToast('❌ Archivo inválido',false);}};
+  r.onload=e=>{try{data=JSON.parse(e.target.result); if(!data.retos) data.retos=[]; ensureBalanceData(); ensureGlobalStakeDefault(); migrateOldTypeLabels(); ensureNotas(); ensureGrupos(); data.tipsters.forEach(t=>{refreshBankPico(t);maybeRefreshBankPctSnapshot(t);}); save();renderAll();showToast('✅ Datos importados');}catch{showToast('❌ Archivo inválido',false);}};
   r.readAsText(f);ev.target.value='';
 }
 
@@ -4601,6 +4747,11 @@ window.openTipsterPicker=openTipsterPicker;
 window.closeTipsterPicker=closeTipsterPicker;
 window.selectTipsterFromPicker=selectTipsterFromPicker;
 window.openDeportePicker=openDeportePicker;
+window.openGrupoPicker=openGrupoPicker;
+window.closeGrupoPicker=closeGrupoPicker;
+window.addNewGrupo=addNewGrupo;
+window.selectGrupoFromPicker=selectGrupoFromPicker;
+window.setChartGrupoFilter=setChartGrupoFilter;
 window.closeDeportePicker=closeDeportePicker;
 window.renderDeportePickerL1=renderDeportePickerL1;
 window.openDeporteSubmenu=openDeporteSubmenu;
