@@ -53,6 +53,7 @@ header h1{font-family:'Unbounded',sans-serif;font-size:1rem;font-weight:900;colo
 .hbtn:hover{color:var(--accent);border-color:var(--accent);}
 .container{max-width:1320px;margin:0 auto;padding:16px 12px;}
 .tabs{display:flex;gap:3px;background:var(--s1);border-radius:10px;padding:4px;border:1px solid var(--border);margin-bottom:16px;overflow-x:auto;}
+.tabs-main .tab{padding:8px 4px;font-size:0.66rem;letter-spacing:-0.2px;}
 .tab{flex:1;padding:8px 10px;background:transparent;border:none;color:var(--muted2);font-family:'DM Sans',sans-serif;font-size:0.73rem;font-weight:700;cursor:pointer;border-radius:7px;transition:all .2s;white-space:nowrap;min-width:max-content;}
 .tab.active{background:var(--s3);color:var(--accent);border:1px solid var(--border);}
 .tab-content{display:none;}.tab-content.active{display:block;}
@@ -258,10 +259,6 @@ select option{background:var(--s2);}
   </div>
 </div>
 
-<!-- BOTÓN FLOTANTE: NUEVA APUESTA -->
-<button id="fabNueva" onclick="switchTab('nueva')" title="Nueva apuesta"
-  style="position:fixed;right:16px;bottom:22px;z-index:150;width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:1.6rem;box-shadow:0 4px 14px rgba(108,99,255,.45);cursor:pointer;display:flex;align-items:center;justify-content:center;">＋</button>
-
 <div class="container">
 
 <!-- GLOBAL STATS -->
@@ -284,15 +281,18 @@ select option{background:var(--s2);}
 </div>
 
 <!-- TABS -->
-<div class="tabs">
+<div class="tabs tabs-main">
   <button class="tab active" data-group="tipsters" onclick="switchTab('tipsters')">👤 Tipsters</button>
   <button class="tab" data-group="apuestas" onclick="switchTab('apuestas')">📋 Apuestas</button>
   <button class="tab" data-group="analisis" onclick="openAnalisis()">📊 Análisis</button>
+  <button class="tab" data-group="nueva" onclick="switchTab('nueva')">➕ Registrar</button>
 </div>
 
-<!-- PICKER: Vista (dentro de Análisis) -->
-<div class="picker-overlay" id="vistaPickerOverlay" style="display:none;" onclick="if(event.target===this)closeVistaPicker()">
-  <div class="picker-sheet" id="vistaPickerList"></div>
+<!-- SUBTABS: dentro de Análisis (Gráficas / Balance / Unidades) -->
+<div class="tabs subtabs" id="analisisSubtabs" style="display:none;margin-bottom:11px;">
+  <button class="tab subtab" id="anst-graficas" onclick="switchTab('graficas')">📈 Gráficas</button>
+  <button class="tab subtab" id="anst-balance" onclick="switchTab('balance')">💰 Balance</button>
+  <button class="tab subtab" id="anst-unidades" onclick="switchTab('unidades')">📐 Unidades</button>
 </div>
 
 <!-- ===== TAB TIPSTERS ===== -->
@@ -545,9 +545,6 @@ select option{background:var(--s2);}
 
 <!-- ===== TAB UNIDADES ===== -->
 <div id="tab-unidades" class="tab-content">
-  <button type="button" class="picker-trigger vista-trigger" onclick="openVistaPicker()" style="max-width:200px;margin-bottom:11px;">
-    <span class="vista-trigger-text">📐 Unidades</span><span class="chev">▾</span>
-  </button>
   <div class="stats-strip">
     <div class="stat-box"><div class="stat-lbl">U. Net (jug)</div><div class="stat-val green" id="u-net-p">+0u</div></div>
     <div class="stat-box"><div class="stat-lbl">Yield U. (jug)</div><div class="stat-val cyan" id="u-yield-p">0%</div></div>
@@ -608,9 +605,6 @@ select option{background:var(--s2);}
 
 <!-- ===== TAB GRAFICAS ===== -->
 <div id="tab-graficas" class="tab-content">
-  <button type="button" class="picker-trigger vista-trigger" onclick="openVistaPicker()" style="max-width:200px;margin-bottom:11px;">
-    <span class="vista-trigger-text">📈 Gráficas</span><span class="chev">▾</span>
-  </button>
   <div class="tabs subtabs" style="margin-bottom:11px;">
     <button class="tab subtab active" id="gst-apuestas" onclick="setGraficasSubView('apuestas')">📊 Apuestas</button>
     <button class="tab subtab" id="gst-retos" onclick="setGraficasSubView('retos')">🎯 Retos</button>
@@ -734,9 +728,6 @@ select option{background:var(--s2);}
 
 <!-- ===== TAB BALANCE ===== -->
 <div id="tab-balance" class="tab-content">
-  <button type="button" class="picker-trigger vista-trigger" onclick="openVistaPicker()" style="max-width:200px;margin-bottom:11px;">
-    <span class="vista-trigger-text">💰 Balance</span><span class="chev">▾</span>
-  </button>
   <div style="margin-bottom:11px;"><span class="flbl">Casa:</span>
     <div style="display:flex;gap:8px;margin-top:5px;">
       <div class="casa-btn casa-1xbet sel" id="balc-1xbet" onclick="setBalCasa('1xbet')"><span class="casa-accent">1</span>xbet</div>
@@ -1477,6 +1468,8 @@ const DEPORTE_SUB = {
     {emoji:'🇮🇹', label:'Italia'},
     {emoji:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', label:'Inglaterra'},
     {emoji:'🇪🇸', label:'España'},
+    {emoji:'🇩🇪', label:'Alemania'},
+    {emoji:'🇩🇪', label:'Alemania 2ª/3ª'},
     {emoji:'🇵🇹', label:'Portugal'},
     {emoji:'🇫🇷', label:'Francia'},
     {emoji:'🇸🇪', label:'Suecia'},
@@ -1857,7 +1850,7 @@ function toggleMoreMenu() {
 function closeMoreMenu() { document.getElementById('moreMenuOverlay').style.display = 'none'; }
 
 let analisisLastView = 'graficas';
-const TAB_GROUP = { tipsters:'tipsters', apuestas:'apuestas', graficas:'analisis', balance:'analisis', unidades:'analisis' };
+const TAB_GROUP = { tipsters:'tipsters', apuestas:'apuestas', graficas:'analisis', balance:'analisis', unidades:'analisis', nueva:'nueva' };
 function toggleAnalisisRiesgo() {
   const content = document.getElementById('analisisRiesgoContent');
   const chev = document.getElementById('analisisRiesgoChev');
@@ -1872,7 +1865,16 @@ function switchTab(id) {
   document.getElementById('tab-'+id).classList.add('active');
   const group = TAB_GROUP[id];
   if (group) { const btn = document.querySelector('.tab[data-group="'+group+'"]'); if (btn) btn.classList.add('active'); }
-  if (['graficas','balance','unidades'].includes(id)) { analisisLastView = id; updateVistaTrigger(id); }
+  const analisisSubtabs = document.getElementById('analisisSubtabs');
+  if (['graficas','balance','unidades'].includes(id)) {
+    analisisLastView = id;
+    if (analisisSubtabs) analisisSubtabs.style.display = 'flex';
+    document.querySelectorAll('#analisisSubtabs .subtab').forEach(b=>b.classList.remove('active'));
+    const subBtn = document.getElementById('anst-'+id);
+    if (subBtn) subBtn.classList.add('active');
+  } else if (analisisSubtabs) {
+    analisisSubtabs.style.display = 'none';
+  }
   if (id==='graficas') { updateChartTipsterFilter(); setGraficasSubView(graficasSubView); }
   if (id==='unidades') { updateUnitTipsterFilter(); renderUnidades(); }
   if (id==='nueva') { renderRetoInfoPanel(); updateRiskPanel(); updateGlobalExpoPanel(); }
@@ -1883,28 +1885,6 @@ function switchTab(id) {
   closeMoreMenu();
 }
 function openAnalisis() { switchTab(analisisLastView); }
-function openVistaPicker() {
-  const list = document.getElementById('vistaPickerList'); if (!list) return;
-  const opts = [
-    {view:'balance', emoji:'💰', label:'Balance'},
-    {view:'unidades', emoji:'📐', label:'Unidades'},
-    {view:'graficas', emoji:'📈', label:'Gráficas (Apuestas / Retos / Soñadoras)'},
-  ];
-  list.innerHTML = opts.map(o => `<div class="picker-row" onclick="selectVista('${o.view}',null)">
-    <div class="picker-row-left"><span class="picker-name">${o.emoji} ${o.label}</span></div>
-  </div>`).join('');
-  document.getElementById('vistaPickerOverlay').style.display = 'flex';
-}
-function closeVistaPicker() { document.getElementById('vistaPickerOverlay').style.display = 'none'; }
-function selectVista(view, sub) {
-  closeVistaPicker();
-  switchTab(view);
-  if (view === 'graficas' && sub) setGraficasSubView(sub);
-}
-function updateVistaTrigger(id) {
-  const labels = { balance:'💰 Balance', unidades:'📐 Unidades', graficas: (graficasSubView==='retos'?'🎯 Retos':graficasSubView==='sonadoras'?'🌙 Soñadoras':'📈 Gráficas') };
-  document.querySelectorAll('.vista-trigger-text').forEach(el => { el.textContent = labels[id] || 'Vista'; });
-}
 // ============================================================
 // TIPSTERS
 // ============================================================
@@ -3167,7 +3147,6 @@ function setGraficasSubView(view) {
   if (view === 'apuestas') { updateChartTipsterFilter(); renderCharts(); }
   else if (view === 'retos') { renderGraficasRetos(); updateRetosTipsterFilter(); renderRetos(); }
   else if (view === 'sonadoras') renderGraficasSonadoras();
-  updateVistaTrigger('graficas');
 }
 
 function getArchivedRetos() {
@@ -4697,9 +4676,6 @@ window.switchTab=switchTab;
 window.toggleMoreMenu=toggleMoreMenu;
 window.closeMoreMenu=closeMoreMenu;
 window.openAnalisis=openAnalisis;
-window.openVistaPicker=openVistaPicker;
-window.closeVistaPicker=closeVistaPicker;
-window.selectVista=selectVista;
 window.addTipster=addTipster;
 window.deleteTipster=deleteTipster;
 window.archiveTipster=archiveTipster;
